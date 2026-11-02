@@ -41,8 +41,12 @@ android {
 
     flavorDimensions += "mode"
     productFlavors {
-        // Local ports differ per app so com.antigem.achiva and com.termux.achiva can be installed and run side by side
-        // (com.antigem.achiva: +2, so its bridge port never equals com.termux.achiva's hub port).
+        // Local ports differ per app so com.antigem / com.termux / com.antigem.achiva / com.termux.achiva
+        // can all be installed and run side by side:
+        //   com.antigem (original standard): 1236 / 1237 / 8767
+        //   com.termux  (original termux):   1234 / 1235 / 8765
+        //   com.antigem.achiva (merged):     1236 / 1237 / 8767
+        //   com.termux.achiva (merged):      1238 / 1239 / 8769  (+4 vs original termux, no overlap)
         create("standard") {
             dimension = "mode"
             applicationId = "com.antigem.achiva"
@@ -53,9 +57,9 @@ android {
         create("termux") {
             dimension = "mode"
             applicationId = "com.termux.achiva"
-            buildConfigField("int", "BRIDGE_PORT", "1234")
-            buildConfigField("int", "HUB_PORT", "1235")
-            buildConfigField("int", "BROWSER_MCP_PORT", "8765")
+            buildConfigField("int", "BRIDGE_PORT", "1238")
+            buildConfigField("int", "HUB_PORT", "1239")
+            buildConfigField("int", "BROWSER_MCP_PORT", "8769")
         }
     }
 

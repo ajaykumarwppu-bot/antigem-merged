@@ -722,11 +722,14 @@ class AuthPreferences(private val context: Context) {
         context.dataStore.edit { it[SECURITY_TOKEN] = validToken }
     }
 
+    private val isTermuxStyleApp: Boolean
+        get() = context.packageName == "com.termux" || context.packageName == "com.termux.achiva"
+
     fun getDefaultBridgeBinaryPath(): String =
-        if (context.packageName == "com.termux") DEFAULT_BRIDGE_BINARY_PATH else DEFAULT_UBUNTU_BRIDGE_BINARY_PATH
+        if (isTermuxStyleApp) DEFAULT_BRIDGE_BINARY_PATH else DEFAULT_UBUNTU_BRIDGE_BINARY_PATH
 
     fun getDefaultAgyBinaryPath(): String =
-        if (context.packageName == "com.termux") DEFAULT_AGY_BINARY_PATH else DEFAULT_UBUNTU_AGY_BINARY_PATH
+        if (isTermuxStyleApp) DEFAULT_AGY_BINARY_PATH else DEFAULT_UBUNTU_AGY_BINARY_PATH
 
     val agyBridgeBinaryPath: Flow<String> = context.dataStore.data.map {
         it[AGY_BRIDGE_BINARY_PATH] ?: getAgyBridgeBinaryPathSync()
@@ -755,7 +758,7 @@ class AuthPreferences(private val context: Context) {
     }
 
     fun getDefaultClaudeBinaryPath(): String =
-        if (context.packageName == "com.termux") DEFAULT_CLAUDE_BINARY_PATH else DEFAULT_UBUNTU_CLAUDE_BINARY_PATH
+        if (isTermuxStyleApp) DEFAULT_CLAUDE_BINARY_PATH else DEFAULT_UBUNTU_CLAUDE_BINARY_PATH
 
     fun getClaudeBinaryPathSync(): String =
         syncPrefs.getString("claude_binary_path", getDefaultClaudeBinaryPath()) ?: getDefaultClaudeBinaryPath()

@@ -172,7 +172,11 @@ object LocalEnvironmentManager {
     fun getHomeDir(context: Context): File = File(context.filesDir, "home")
     fun getProjectsDir(context: Context): File = File(getHomeDir(context), "projects")
     fun getUbuntuRootDir(context: Context): File = File(context.filesDir, "ubuntu")
-    fun isTermuxPackage(context: Context): Boolean = context.packageName == "com.termux"
+    // The merged Achiva build keeps the termux-style layout (full bootstrap) under com.termux.achiva,
+    // so it must be treated like com.termux: the light Ubuntu-proot path would need a proot binary
+    // that is not shipped in the APK ("this server did not start").
+    fun isTermuxPackage(context: Context): Boolean =
+        context.packageName == "com.termux" || context.packageName == "com.termux.achiva"
 
     fun ensureProotExtracted(context: Context): String {
         val binDir = File(context.filesDir, "bin")
