@@ -1,0 +1,170 @@
+/* ================================================================
+   RESPONSIVE.CSS — tablet / laptop / desktop adaptation  (load 5/5)
+   ----------------------------------------------------------------
+   Ye file SIRF breakpoints aur wide-screen layout rakhti hai.
+   Mobile (≤480px) par iska EK BHI rule apply nahi hota — purana
+   phone-experience byte-for-byte waisa hi rehta hai.
+
+   BREAKPOINTS
+     ≤480px          phone          → kuch nahi (base CSS chalta hai)
+     481–820px       bada phone /   → frame full-bleed, FAB menu wahi,
+                     tablet portrait  chhoti grid improvements
+     821–1180px      tablet land /  → frame tootta hai: full-width app +
+                     chhota laptop    LEFT SIDEBAR NAV + scrollbars + hover
+     >1180px         desktop        → wahi + reading-width cap + type scale
+
+   DESIGN RULES
+     • .device ka phone-frame wide screens par hat jaata hai
+     • .stage-note (decorative desktop panel) hat jaata hai — jagah asli
+       app ko milti hai
+     • .statusbar (fake phone bar) hat jaata hai
+     • FAB menu wide par hide (sidebar le leta hai); mobile par wahi
+     • Scrollbars wide par visible (desktop affordance)
+     • Sab buttons par hover + :focus-visible (mouse + keyboard)
+     • Modals wide par chauri centered dialog
+   ================================================================ */
+
+/* ================================================================
+   1) TABLET PORTRAIT & UP (481px+) : frame full-bleed
+   ================================================================ */
+@media (min-width: 481px) {
+  body { padding: 0; }
+  .device {
+    width: 100vw; height: 100dvh;
+    margin: 0; border-radius: 0; box-shadow: none;
+  }
+  /* FAB menu thoda bada touch-target comfort */
+  .menu-grid { grid-template-columns: 1fr 1fr; }
+  /* modal sheets thodi chauri */
+  .sheet { width: min(440px, calc(100% - 48px)) !important; }
+}
+
+/* ================================================================
+   2) WIDE (821px+) : frame toot-ta hai, sidebar aata hai
+   ================================================================ */
+/* BASE (koi media-query nahi) : nav rail sirf wide screens par dikhti hai.
+   Ye rule zaroori hai — iske bina rail phone par bhi render ho jaati thi
+   (pichhla bug). Phone (<=480px) ki UI/CSS bilkul untouched rehti hai. */
+.side-nav { display: none; }
+
+@media (min-width: 821px) {
+
+  /* --- decorative phone-stage hat-ao --- */
+  .stage-note { display: none; }
+  .statusbar { display: none; }
+
+  /* --- vertical nav rail (app-shell.js banata hai) ---
+     Reference-image wala sliding highlight, lekin VERTICAL :
+     ek hi .sn-blob element item-item ke beech slide/morph karta hai.
+     Blob ka rang THEME se aata hai : light mein var(--ink) = black,
+     dark mein var(--ink) = app wala grey-silver. Koi naya color nahi. */
+  .side-nav {
+    display: flex;
+    position: absolute; left: 0; top: 0; bottom: 0; width: 200px;
+    flex-direction: column;
+    padding: 14px 12px 12px;
+    border-right: 1px solid var(--line);
+    background: var(--tile-bg);
+    z-index: 46; overflow: hidden;
+  }
+  .side-nav .sn-brand {
+    padding: 2px 6px 12px; border-bottom: 1px solid var(--line);
+    margin-bottom: 12px; flex: none;
+  }
+  /* header ka brand lockup wide par hat-ta hai — rail mein aa chuka hai.
+     (Phone par rail hidden hai, isliye header wala brand wahi dikhta hai.) */
+  .home-top .brand { display: none; }
+  .sn-list { position: relative; display: flex; flex-direction: column; gap: 4px; }
+  .sn-blob {
+    position: absolute; left: 0; right: 0; top: 0; height: 44px;
+    border-radius: 13px; background: var(--ink);
+    box-shadow: 0 12px 26px -14px rgba(0,0,0,.6);
+    opacity: 0;
+    transition: transform .38s cubic-bezier(.34,1.28,.44,1), opacity .2s ease;
+    pointer-events: none;
+  }
+  .side-item {
+    position: relative; z-index: 1;
+    display: flex; align-items: center; gap: 11px;
+    height: 44px; padding: 0 12px; border: 0; border-radius: 13px;
+    background: transparent; color: var(--slate);
+    font: inherit; font-size: 13px; font-weight: 600;
+    text-align: left; cursor: pointer;
+    transition: color .25s ease, background .15s ease;
+  }
+  .side-item svg { flex: none; }
+  .side-item.on { color: var(--paper); }
+  .side-item:hover:not(.on) { color: var(--ink); background: var(--chip-bg); }
+
+  /* --- FAB menu wide par bekar (sidebar hai) --- */
+  #fab, #fabCol, #fabRow { display: none !important; }
+
+  /* --- scrollbars visible (desktop affordance) --- */
+  .scroll, .chap-area {
+    scrollbar-width: thin;
+    scrollbar-color: var(--s2) transparent;
+  }
+  .scroll::-webkit-scrollbar, .chap-area::-webkit-scrollbar { width: 10px; height: 10px; }
+  .scroll::-webkit-scrollbar-thumb, .chap-area::-webkit-scrollbar-thumb {
+    background: var(--s2); border-radius: 99px;
+    border: 3px solid transparent; background-clip: content-box;
+  }
+  .scroll::-webkit-scrollbar-track, .chap-area::-webkit-scrollbar-track { background: transparent; }
+
+  /* --- reading-width cap (ultra-wide par lines lambi na hon) --- */
+  .scroll { max-width: 1180px; margin: 0 auto; padding-bottom: 48px; }
+  .chap-area { max-width: 1180px; margin: 0 auto; }
+
+  /* --- modals : chauri centered dialog --- */
+  .sheet { width: min(560px, calc(100% - 64px)) !important; }
+
+  /* --- mouse feedback : sab interactive cheezein --- */
+  button { cursor: pointer; }
+  button:hover { filter: brightness(.965); }
+  [data-theme="dark"] button:hover { filter: brightness(1.16); }
+  button:focus-visible, input:focus-visible, select:focus-visible,
+  textarea:focus-visible, [tabindex]:focus-visible {
+    outline: 2px solid var(--ink); outline-offset: 2px; border-radius: 8px;
+  }
+
+  /* --- type scale : desktop par thoda bada --- */
+  body { font-size: 15px; }
+  .sub-meta { font-size: 12px; }
+  .sec-row { padding: 26px 28px 10px; }
+  .chips { padding: 2px 28px 14px; }
+  .sub-card { margin: 0 28px 12px; }
+  .hero { margin: 16px 28px 6px; }
+
+  /* NOTE: multi-column grids PHASE 2 mein aayengi (proper wrappers ke saath).
+     Yahan sirf safe spacing / type-scale / navigation / feedback changes hain. */
+}
+
+/* ================================================================
+   3) DESKTOP (1181px+) : type + spacing thoda aur khula
+   ================================================================ */
+@media (min-width: 1181px) {
+  .side-nav { width: 220px; }
+  .app { left: 220px; }
+  .scroll { max-width: 1320px; }
+  .chap-area { max-width: 1320px; }
+  body { font-size: 15.5px; }
+}
+
+/* ================================================================
+   4) LANDSCAPE PHONE / chhoti height (optional comfort)
+   ================================================================ */
+@media (max-height: 520px) and (min-width: 640px) {
+  .scroll { padding-bottom: 24px; }
+  .hero { padding: 12px; }
+  .hero-hours { font-size: 26px; }
+}
+
+/* ================================================================
+   5) PRINT (basic sanity — app chrome hat-ao)
+   ================================================================ */
+@media print {
+  body { padding: 0; background: #fff; }
+  .device { width: 100%; height: auto; box-shadow: none; border-radius: 0; }
+  .side-nav, #fab, #fabCol, #fabRow, .statusbar { display: none !important; }
+  .app { left: 0; }
+}

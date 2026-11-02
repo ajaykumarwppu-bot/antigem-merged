@@ -1,0 +1,65 @@
+rules_version = '2';
+
+/* ================================================================
+   FIRESTORE.RULES — achiva ka data lock (verified emails only)
+   ----------------------------------------------------------------
+   • Har user SIRF apna data (users/<apna-uid>/...) padh/likh sakta hai.
+   • Email+password users ke liye email_verified LAZMI hai —
+     unverified signup OTP-bypass se cloud likh nahi sakta.
+     (Google users Firebase pehle se verified maanta hai.)
+   • Bina login koi kuch nahi padh sakta.
+   • Profile doc par sirf allowed keys (junk-field abuse blocked).
+   • Baaki poori database default deny.
+
+   Deploy (do mein se ek tarika):
+     A) Firebase Console → Firestore Database → Rules → ye poora text
+        paste karein → Publish
+     B) firebase CLI:  firebase deploy --only firestore:rules
+        (is file ka naam firestore.rules hona chahiye aur
+         firebase.json mein "firestore": {"rules": "backend/firestore.rules"} )
+
+   Note: ye file website par deploy NAHI hoti — sirf Firebase ke liye hai.
+   ================================================================ */
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    /* ---- login ke bina kuch bhi nahi ---- */
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    /* ---- sirf apna data (profile doc = users/<uid> , backup docs = users/<uid>/data/*) ---- */
+    match /users/{uid} {
+      /* profile doc khud (users/<uid>) — sirf verified malik */
+      allow read: if request.auth != null
+                  && request.auth.uid == uid
+                  && request.auth.token.email_verified == true;
+
+      /* 'uid' bhi allowed hai — backup.js profile doc mein uid likhta hai;
+         pehle hasOnly mein 'uid' missing tha isliye Backup now ka profile
+         step permission-denied se fail hota tha. */
+      allow write: if request.auth != null
+                   && request.auth.uid == uid
+                   && request.auth.token.email_verified == true
+                   && request.resource.data.keys().hasOnly(['email', 'createdAt', 'lastBackupAt', 'app', 'v', 'uid']);
+
+      /* backup docs — sirf verified malik.
+         NOTE: read aur write ALAG hain, kyunki 'request.resource' sirf WRITE par
+         exist karta hai; read par wo undefined hota hai aur combined condition
+         read ko deny kar deti thi (isi se restore 'permission denied' hota tha). */
+      match /data/{docId} {
+        allow read: if request.auth != null
+                    && request.auth.uid == uid
+                    && request.auth.token.email_verified == true;
+
+        allow write: if request.auth != null
+                     && request.auth.uid == uid
+                     && request.auth.token.email_verified == true
+                     && request.resource.data.keys().hasAll(['v', 'savedAt', 'value'])
+                     && request.resource.data.value is string
+                     && request.resource.data.value.size() <= 900000;
+      }
+    }
+  }
+}

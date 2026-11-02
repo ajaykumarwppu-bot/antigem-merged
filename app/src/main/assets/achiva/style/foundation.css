@@ -1,0 +1,142 @@
+
+/* ================================================================
+   FOUNDATION.CSS — visual foundation / design DNA of the app
+   ----------------------------------------------------------------
+   Responsibility (as per project canvas):
+     • Light theme + Dark theme ke global colors
+     • Main background & surface colors
+     • Primary / secondary / accent colors
+     • Global text colors
+     • Typography defaults + font-size / font-weight base rules
+     • Border colors, border-radius values, shadow values
+     • Global spacing variables
+     • Standard transition & animation duration variables
+     • CSS variables & reusable design tokens
+     • Basic global reset & default element styling
+     • Global keyframes (motion system)
+   Yahan kisi specific screen, feature ya individual component ki
+   positioning NAHI hogi — sirf global values jo pure app mein
+   consistent rehni chahiye.
+   Load order: 1/4  (foundation → layout → component → screen)
+   ================================================================ */
+
+/* ============ PALETTE : white · silver · gray ============ */
+:root{
+  --white:#ffffff; --paper:#f3f4f6; --mist:#eceef1;
+  --s1:#e4e7eb; --s2:#d5d9df; --s3:#c3c9d1;
+  --steel:#aab1bb; --ash:#8a929d; --slate:#5b636d;
+  --ink:#22262c; --ink2:#3a4047; --line:#dfe2e7;
+  --shadow:0 14px 30px -18px rgba(30,34,40,.35);
+  --card-bg:linear-gradient(180deg,#fff,#fafbfc);
+  --tile-bg:#ffffff;
+  --hero-bg:linear-gradient(150deg,#fdfdfe 0%,#eef0f3 38%,#f7f8fa 55%,#e2e6ea 100%);
+  --menu-bg:linear-gradient(165deg,#ffffff,#eef0f3 60%,#e5e8ec);
+  --fab-bg:linear-gradient(160deg,#ffffff 0%,#e9ecf0 45%,#d7dbe1 100%);
+  --ico-bg:linear-gradient(160deg,#f7f8fa,#dee2e7);
+  --chap-active-bg:linear-gradient(165deg,#ffffff,#f0f2f5);
+  --chap-bg:#ffffff;
+  --sheet-bg:linear-gradient(180deg,#fff,#f3f4f7);
+  --input-bg:#ffffff;
+  --empty-bg:rgba(255,255,255,.55);
+  --addchap-bg:rgba(255,255,255,.6);
+  --pop-bg:#ffffff;
+  --mi-bg:rgba(255,255,255,.55);
+  --hl:rgba(255,255,255,.65);
+  --hl-soft:rgba(255,255,255,.7);
+  --chip-bg:#fff;
+  --stage-bg:#16181b;
+  --track:#dde1e6;
+  --line-strong:#22262c;
+  --flabel-bg:#f2f3f6;
+  --f-disp:"Space Grotesk",sans-serif;
+  --f-body:"Instrument Sans",sans-serif;
+  --f-mono:"JetBrains Mono",monospace;
+
+  /* ---- border-radius scale (design tokens) ---- */
+  --r-xs:8px; --r-sm:12px; --r-md:14px; --r-lg:18px;
+  --r-xl:22px; --r-2xl:24px; --r-pill:99px; --r-circle:50%;
+
+  /* ---- global spacing scale (design tokens) ---- */
+  --sp-1:4px; --sp-2:8px; --sp-3:12px; --sp-4:16px;
+  --sp-5:20px; --sp-6:24px; --sp-8:32px; --sp-10:40px;
+
+  /* ---- standard transition / animation durations ---- */
+  --t-fast:.15s; --t-med:.25s; --t-slow:.42s;
+  --ease-std:cubic-bezier(.3,.7,.3,1);
+  --ease-pop:cubic-bezier(.32,.72,.24,1);
+
+  /* ---- type scale tokens ---- */
+  --fs-micro:9.5px; --fs-small:11.5px; --fs-body:13px;
+  --fs-title:16px; --fs-head:20px; --fs-display:34px;
+  --fw-med:500; --fw-semi:600; --fw-bold:700;
+}
+
+/* ================================================================
+   DARK THEME — complete dark · boxes highlighted like feature menu
+   ================================================================ */
+[data-theme="dark"]{
+  color-scheme:dark;
+  --paper:#0e1014; --mist:#171b21;
+  --s1:#22272f; --s2:#2f3640; --s3:#3f4854;
+  --steel:#5e6673; --ash:#8f97a3; --slate:#a9b1bc;
+  --ink:#eef1f5; --ink2:#cdd3db; --line:#242a33;
+  --shadow:0 20px 40px -18px rgba(0,0,0,.75);
+  --card-bg:linear-gradient(180deg,#1b2029,#151a21);
+  --tile-bg:#181d25;
+  --hero-bg:linear-gradient(150deg,#20252e 0%,#14181e 40%,#1a1e26 58%,#101318 100%);
+  --menu-bg:linear-gradient(165deg,#1e232b,#15181e 62%,#12151a);
+  --fab-bg:linear-gradient(160deg,#2d333d 0%,#1c2129 48%,#12151a 100%);
+  --ico-bg:linear-gradient(160deg,#262c35,#171b21);
+  --chap-active-bg:linear-gradient(165deg,#232935,#181d24);
+  --chap-bg:#171c23;
+  --sheet-bg:linear-gradient(180deg,#1e232b,#14171d);
+  --input-bg:#0f1216;
+  --empty-bg:rgba(255,255,255,.03);
+  --addchap-bg:rgba(255,255,255,.03);
+  --pop-bg:#1c212a;
+  --mi-bg:rgba(255,255,255,.04);
+  --hl:rgba(255,255,255,.09);
+  --hl-soft:rgba(255,255,255,.055);
+  --chip-bg:#181d25;
+  --stage-bg:#08090c;
+  --track:#242a33;
+  --line-strong:#2b313a;
+  --flabel-bg:#12151a;
+}
+
+/* smooth cross-fade only while switching */
+html.theming *,html.theming *::before,html.theming *::after{
+  transition:background-color .45s ease,border-color .45s ease,color .45s ease,
+             box-shadow .45s ease,fill .45s ease,stroke .45s ease !important;
+}
+
+/* ============ global reset & default element styling ============ */
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{height:100%}
+
+/* body base: global text color + main stage background + type family */
+body{
+  font-family:var(--f-body);color:var(--ink);background-color:var(--stage-bg);
+  background:
+    radial-gradient(900px 600px at 75% 10%, rgba(178,188,202,.10), transparent 60%),
+    radial-gradient(700px 520px at 10% 88%, rgba(120,128,140,.09), transparent 60%),
+    repeating-linear-gradient(0deg, rgba(255,255,255,.022) 0 1px, transparent 1px 46px),
+    repeating-linear-gradient(90deg, rgba(255,255,255,.022) 0 1px, transparent 1px 46px),
+    var(--stage-bg);
+}
+
+/* ============ global typography utility ============ */
+.eyebrow{font-size:9.5px;letter-spacing:.16em;color:var(--ash);font-weight:600;text-transform:uppercase}
+
+/* ================================================================
+   MOTION SYSTEM — global keyframes (reusable across screens)
+   ================================================================ */
+@keyframes rise{from{opacity:0;transform:translateY(16px)}}
+@keyframes sheen{0%{transform:translateX(-140%) skewX(-16deg)}32%,100%{transform:translateX(340%) skewX(-16deg)}}
+@keyframes ringIn{to{stroke-dashoffset:62}}
+@keyframes grow{from{transform:scaleY(0)}}
+@keyframes pulse{0%{transform:scale(.82);opacity:0}30%{opacity:.7}100%{transform:scale(1.28);opacity:0}}
+@keyframes miIn{from{opacity:0;transform:translateY(10px) scale(.92)}}
+
+/* ============ global motion preference ============ */
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}

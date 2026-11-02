@@ -1,0 +1,93 @@
+
+/* ================================================================
+   LAYOUT.CSS — structure, positioning & spatial arrangement
+   ----------------------------------------------------------------
+   Responsibility (as per project canvas):
+     • App shell layout (stage, device frame, app container)
+     • Header ki position & structure (statusbar, screen headers)
+     • Main content area ki positioning
+     • Screen containers (.screen / .scroll)
+     • Sections ke beech spacing
+     • Flexbox & Grid layouts, columns & rows
+     • Responsive layout rules & mobile screen adaptation
+     • Scroll containers
+     • Fixed, sticky ya relative positioning
+     • Content alignment
+     • Large page-level container dimensions
+   Yahan kisi button/card ka poora visual design NAHI hoga — sirf
+   unke aas-paas ka layout & placement.
+   Load order: 2/4  (foundation → layout → component → screen)
+   ================================================================ */
+
+/* ---------- app shell : stage ---------- */
+body{
+  min-height:100dvh;display:flex;padding:16px;overflow:auto;
+}
+
+/* ---------- device frame (page-level container) ---------- */
+.device{
+  margin:auto;flex:none;position:relative;
+  width:min(430px,100vw);height:min(896px,100dvh);
+  border-radius:44px;overflow:hidden;
+  background-color:var(--paper);
+  background:
+    radial-gradient(130% 70% at 50% -12%, rgba(255,255,255,.95) 0%, rgba(255,255,255,0) 55%),
+    repeating-linear-gradient(115deg, rgba(60,70,80,.016) 0 2px, transparent 2px 7px),
+    linear-gradient(180deg,var(--paper),var(--mist));
+  box-shadow:0 0 0 1px rgba(255,255,255,.14),0 0 0 10px #26282d,0 0 0 11px rgba(255,255,255,.08),0 60px 110px -40px rgba(0,0,0,.85);
+}
+[data-theme="dark"] .device{
+  background:
+    radial-gradient(130% 70% at 50% -12%, rgba(120,132,148,.22) 0%, rgba(120,132,148,0) 55%),
+    repeating-linear-gradient(115deg, rgba(255,255,255,.02) 0 2px, transparent 2px 7px),
+    linear-gradient(180deg,#12151a,#0d0f13);
+}
+@media(max-width:480px){
+  body{padding:0}
+  .device{width:100vw;height:100dvh;border-radius:0;box-shadow:none}
+}
+.app{position:absolute;inset:0;overflow:hidden;overscroll-behavior:none}
+
+/* ---------- status bar (fixed top header) ---------- */
+.statusbar{position:absolute;top:0;left:0;right:0;height:42px;z-index:40;pointer-events:none;
+  display:flex;align-items:center;justify-content:space-between;padding:0 22px;
+  font-family:var(--f-mono);font-size:12px;font-weight:600;color:var(--ink2)}
+.sb-ico{display:flex;gap:6px;align-items:center;color:var(--slate)}
+
+/* ---------- screen containers ---------- */
+.screen{position:absolute;inset:0;display:flex;flex-direction:column;padding-top:42px;
+  opacity:0;transform:translateX(28px);pointer-events:none;
+  transition:opacity .38s ease,transform .42s cubic-bezier(.32,.72,.24,1)}
+.screen.active{opacity:1;transform:none;pointer-events:auto}
+.screen.exit-left{transform:translateX(-26px)}
+
+/* ---------- scroll containers ---------- */
+.scroll{flex:1;overflow-y:auto;overscroll-behavior:contain;padding-bottom:130px}
+.scroll::-webkit-scrollbar,.chap-area::-webkit-scrollbar{width:0;height:0}
+
+/* ---------- home header structure ---------- */
+.home-top{display:flex;align-items:center;justify-content:space-between;padding:12px 20px 6px}
+.hd-right{display:flex;align-items:center;gap:8px}
+
+/* ---------- section row spacing ---------- */
+.sec-row{display:flex;align-items:center;justify-content:space-between;padding:24px 20px 8px}
+.chips{display:flex;gap:8px;padding:2px 20px 12px}
+
+/* ---------- subject screen header structure ---------- */
+.sub-top{display:flex;align-items:center;gap:12px;padding:10px 18px 4px}
+.sub-title-wrap{flex:1;min-width:0}
+.stat-strip{display:flex;gap:10px;padding:12px 18px 2px}
+
+/* ---------- chapter scroll area (relative + scroll container) ---------- */
+.chap-wrap{position:relative;flex:1;min-height:0;margin-top:6px}
+.chap-area{position:absolute;inset:0;overflow-y:auto;overscroll-behavior:contain;padding:6px 18px 90px}
+.chap-list{position:relative}
+
+/* ---------- feature menu placement (corner-anchored popover) ---------- */
+.app[data-corner="br"] .menu{right:14px;bottom:96px;transform-origin:94% 110%}
+.app[data-corner="bl"] .menu{left:14px;bottom:96px;transform-origin:6% 110%}
+.app[data-corner="tr"] .menu{right:14px;top:112px;transform-origin:94% -10%}
+.app[data-corner="tl"] .menu{left:14px;top:112px;transform-origin:6% -10%}
+
+/* ---------- menu grid (columns & rows) ---------- */
+.menu-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px}

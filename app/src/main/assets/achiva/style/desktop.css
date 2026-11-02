@@ -1,0 +1,29 @@
+/* ================================================================
+   DESKTOP.CSS — laptop/desktop ka "layout skin"  (load 6/6)
+   ----------------------------------------------------------------
+   ARCHITECTURE RULE (Layout-Skin design) :
+     • PHONE ka design = base files (foundation/layout/component/screen)
+       — ye FROZEN hain, inme kabhi wide-screen rule nahi likhna
+     • DESKTOP ka design = SIRF ye file
+     • Is file ka HAR rule do gates ke ANDAR hona zaroori :
+           @media (min-width: 821px) { … }
+           aur selector mein [data-form="wide"] …
+       (data-form attribute core/form-factor.js set karta hai)
+     • Guard test (test-responsive.js) is file ko scan karta hai aur
+       FAIL ho jaata hai agar koi rule gates ke bahar mila —
+       yani phone par is file ka ek bhi rule apply NAHI ho sakta.
+
+   SAVED PREFS :
+     • Desktop-only layout preferences FormFactor.layoutSet() se save hon
+       (key: achiva.layout.wide.v1) — phone ki prefs (achiva.prefs.v1 /
+       achiva.layout.phone.v1) bilkul alag hain, isliye desktop par save
+       karne se phone par koi farq nahi padta.
+
+   ABHI YE FILE KHAALI SHELL HAI — pehla desktop design yahan aayega.
+   ================================================================ */
+
+/* ---- example (abhi commented) : dashboard side-by-side ----
+@media (min-width: 821px) {
+  [data-form="wide"] .hero { grid-column: 1 / 2; }
+}
+---------------------------------------------------------------- */

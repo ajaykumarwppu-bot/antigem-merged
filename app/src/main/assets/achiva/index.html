@@ -1,0 +1,343 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>achiva</title>
+
+  <!-- style load order : foundation → layout → component → screen -->
+  <link rel="stylesheet" href="style/foundation.css">
+  <link rel="stylesheet" href="style/layout.css">
+  <link rel="stylesheet" href="style/component.css">
+  <link rel="stylesheet" href="style/screen.css">
+  <!-- RESPONSIVE (load 5/5) : tablet/laptop/desktop breakpoints.
+       Mobile (≤480px) par iska koi rule apply nahi hota. -->
+  <link rel="stylesheet" href="style/responsive.css">
+  <!-- DESKTOP SKIN (load 6/6) : sirf wide-screen rules; guard-test gated -->
+  <link rel="stylesheet" href="style/desktop.css">
+  <!-- KATEX (vendor) : notes Read view ke math formulas render karne ke
+       liye. Local bundle — offline chalta hai, koi CDN nahi. Fonts
+       vendor/katex/fonts/ se aate hain (sirf woff2, ~296KB). -->
+  <link rel="stylesheet" href="vendor/katex/katex.min.css">
+
+  <!-- theme pehle se laga do (paint se pehle) → dark mode par koi
+       "white flash" nahi. Pasand backend/settings.js save karti hai
+       (localStorage: achiva.prefs.v1) aur backup ke saath cloud par
+       bhi jaati hai. -->
+  <script>
+    (function () {
+      try {
+        var raw = window.localStorage.getItem('achiva.prefs.v1');
+        var p = raw ? JSON.parse(raw) : null;
+        if (p && p.theme === 'dark') document.documentElement.setAttribute('data-theme', 'dark');
+      } catch (e) { /* localStorage band ho to light theme hi rahega */ }
+    })();
+  </script>
+</head>
+<body>
+
+  <!-- app shell (device frame) -->
+  <div class="device">
+    <div class="app" id="app" data-corner="br">
+
+      <!-- ======================================================
+           GLOBAL HEADER — poore app mein hamesha visible rehta hai
+           (brand lockup + settings gear + date chip)
+           koi own background nahi — app ka lined background hi dikhta hai
+      ======================================================= -->
+      <div class="home-top" style="position:absolute;top:0;left:0;right:0;z-index:35">
+        <div class="brand">
+          <span class="brand-mark">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 7h16M4 12h16M4 17h16"/></svg>
+          </span>
+          <div>
+            <div class="brand-name">ACHIVA</div>
+            <div class="brand-sub">Study OS · v1.0</div>
+          </div>
+        </div>
+        <div class="hd-right">
+          <!-- SETTINGS button (pehle yahan theme toggle tha).
+               Gear ka SVG backend/settings.js daalta hai — wahi purani
+               .theme-btn class use hoti hai, isliye CSS ko chua nahi gaya.
+               Theme toggle ab Settings sheet ke andar hai. -->
+          <button class="theme-btn" id="settingsBtn" type="button" aria-label="Settings"></button>
+          <span class="date-chip" id="dateChip"></span>
+        </div>
+      </div>
+
+      <!-- screens (subjects / chapters / chapter view / books / features)
+           feature files aur neeche wale script se banti hain -->
+
+      <!-- ======================================================
+           FLOATING NAV BUTTON (FAB)
+           collapsed = circle (pulse-wave ring ke saath),
+           expanded  = options column + row + X,
+           long-hold drag → nearest corner par snap
+      ======================================================= -->
+      <div class="cmarks"><i class="c-tl"></i><i class="c-tr"></i><i class="c-bl"></i><i class="c-br"></i></div>
+
+      <button class="fab" id="fab" type="button" aria-label="Navigation menu">
+        <span class="ln ln1"></span><span class="ln ln2"></span><span class="ln ln3"></span>
+      </button>
+
+      <div id="fabCol" style="position:absolute;z-index:55;visibility:hidden;opacity:0;transform:scale(.6);transition:transform .32s cubic-bezier(.34,1.25,.4,1),opacity .2s;display:flex;flex-direction:column;gap:8px;padding:10px;border-radius:22px;background:var(--menu-bg);border:1px solid var(--line);box-shadow:0 26px 54px -22px rgba(20,23,28,.55),inset 0 1px 0 var(--hl-soft);pointer-events:none">
+          <button class="mitem" data-key="dash" type="button" style="display:flex;flex-direction:column;align-items:center;gap:5px;width:52px;padding:9px 0;border-radius:14px;border:1px solid var(--line);background:var(--mi-bg);cursor:pointer;font:inherit;color:var(--ink2)">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>
+            <span style="font-size:8px;font-weight:700;letter-spacing:.08em">DASH</span>
+          </button>
+          <button class="mitem" data-key="thought" type="button" style="display:flex;flex-direction:column;align-items:center;gap:5px;width:52px;padding:9px 0;border-radius:14px;border:1px solid var(--line);background:var(--mi-bg);cursor:pointer;font:inherit;color:var(--ink2)">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3a6 6 0 0 1 6 6c0 2.2-1.2 3.7-2.5 5H8.5C7.2 12.7 6 11.2 6 9a6 6 0 0 1 6-6z"/><path d="M9 18h6M10 21h4"/></svg>
+            <span style="font-size:8px;font-weight:700;letter-spacing:.08em">THOUGHT</span>
+          </button>
+          <button class="mitem" data-key="subs" type="button" style="display:flex;flex-direction:column;align-items:center;gap:5px;width:52px;padding:9px 0;border-radius:14px;border:1px solid var(--line);background:var(--mi-bg);cursor:pointer;font:inherit;color:var(--ink2)">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20V2H6.5A2.5 2.5 0 0 0 4 4.5z"/><path d="M4 19.5A2.5 2.5 0 0 0 6.5 22H20v-5"/></svg>
+            <span style="font-size:8px;font-weight:700;letter-spacing:.08em">SUBS</span>
+          </button>
+          <button class="mitem" data-key="time" type="button" style="display:flex;flex-direction:column;align-items:center;gap:5px;width:52px;padding:9px 0;border-radius:14px;border:1px solid var(--line);background:var(--mi-bg);cursor:pointer;font:inherit;color:var(--ink2)">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>
+            <span style="font-size:8px;font-weight:700;letter-spacing:.08em">TIME</span>
+          </button>
+      </div>
+      <div id="fabRow" style="position:absolute;z-index:55;visibility:hidden;opacity:0;transform:scale(.6);transition:transform .32s cubic-bezier(.34,1.25,.4,1),opacity .2s;display:flex;gap:8px;padding:10px;border-radius:22px;background:var(--menu-bg);border:1px solid var(--line);box-shadow:0 26px 54px -22px rgba(20,23,28,.55),inset 0 1px 0 var(--hl-soft);pointer-events:none">
+          <button class="mitem" data-key="tasks" type="button" style="display:flex;flex-direction:column;align-items:center;gap:5px;width:52px;padding:9px 0;border-radius:14px;border:1px solid var(--line);background:var(--mi-bg);cursor:pointer;font:inherit;color:var(--ink2)">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="4"/><path d="M8 12l3 3 5-6"/></svg>
+            <span style="font-size:8px;font-weight:700;letter-spacing:.08em">TASKS</span>
+          </button>
+          <button class="mitem" data-key="habits" type="button" style="display:flex;flex-direction:column;align-items:center;gap:5px;width:52px;padding:9px 0;border-radius:14px;border:1px solid var(--line);background:var(--mi-bg);cursor:pointer;font:inherit;color:var(--ink2)">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 1l4 4-4 4"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><path d="M7 23l-4-4 4-4"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg>
+            <span style="font-size:8px;font-weight:700;letter-spacing:.08em">HABITS</span>
+          </button>
+          <button class="mitem" data-key="goals" type="button" style="display:flex;flex-direction:column;align-items:center;gap:5px;width:52px;padding:9px 0;border-radius:14px;border:1px solid var(--line);background:var(--mi-bg);cursor:pointer;font:inherit;color:var(--ink2)">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1.4" fill="currentColor" stroke="none"/></svg>
+            <span style="font-size:8px;font-weight:700;letter-spacing:.08em">GOALS</span>
+          </button>
+          <button class="mitem" data-key="draw" type="button" style="display:flex;flex-direction:column;align-items:center;gap:5px;width:52px;padding:9px 0;border-radius:14px;border:1px solid var(--line);background:var(--mi-bg);cursor:pointer;font:inherit;color:var(--ink2)">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19l7-7 3 3-7 7-3-3z"/><path d="M18 13l-1.5-7.5L2 2l3.5 14.5L13 18l5-5z"/></svg>
+            <span style="font-size:8px;font-weight:700;letter-spacing:.08em">DRAW</span>
+          </button>
+      </div>
+
+      <!-- ==============================================
+           LOGIN GATE (compulsory email login)
+           ye div sirf ek placeholder hai — andar ka poora form
+           backend/auth.js banata hai. z-index 400 = sabse upar
+           (header 35 · FAB 55 · modals 95), isliye login ke bina
+           app ka koi hissa chhua nahi ja sakta.
+           Agar Firebase config nahi bhara hua to gate khud hi
+           "Login abhi band hai" dikha kar app kholne deta hai.
+      =============================================== -->
+      <div id="authGate" style="position:absolute;inset:0;z-index:400;display:flex;align-items:center;justify-content:center;padding:20px;background:rgba(12,14,18,.62);backdrop-filter:blur(7px);-webkit-backdrop-filter:blur(7px);transition:opacity .22s ease">
+        <div style="font-size:12px;color:#e8ebef;text-align:center;line-height:1.8;padding:20px;border:1px solid rgba(255,255,255,.16);border-radius:20px;background:rgba(20,24,30,.82)">
+          Achiva khul raha hai...
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ======================================================
+       SCRIPTS (v3 — IndexedDB boot loader)
+       • core/storage.js pehle (static) : AppStorage banata hai
+         aur IndexedDB se memory-cache bharne ki open() shuru.
+       • Loader niche : open() + window "load" ka wait karke
+         baaki SAARE scripts ko bilkul PURANE wale order mein
+         ek-ek karke inject karta hai.
+       Reason: kuch features (subject-store, canvas, goal-list,
+       good-list) parse hote hi AppStorage se state padhte hain —
+       unse pehle IDB cache ready hona zaroori hai. Firebase CDN
+       tags niche parser-blocking hain; loader "load" event ka
+       wait karta hai, isliye backend scripts hamesha firebase
+       ke BAAD chalenge (pehle jaisa hi order).
+  ======================================================= -->
+  <script src="core/storage.js"></script>
+  <script>
+    (function () {
+      'use strict';
+      /* ORIGINAL load order — wahi jo pehle static tags tha */
+      var SRC = [
+        /* DAY-CLOCK: "mera din kab shuru hota hai" — sabse pehle, kyunki
+           habits/dashboard/study iski today() use karte hain. */
+        'core/day-clock.js',
+        /* FORM-FACTOR : data-form/data-input attributes + per-device prefs */
+        'core/form-factor.js',
+        'core/ui.js',
+        'ai/engine.js',
+        'ai/audio.js',
+        'ai/settings.js',
+        /* DAY-CLOCK PHASE 3 : "Mera Din" dual-view dashboard panel */
+        'features/dashboard/dashboard-myday.js',
+        'features/dashboard/dashboard.js',
+        'features/dashboard/dashboard-today.js',
+        'features/subject tracker/subject-store.js',
+        'features/subject tracker/study-timer.js',
+        'features/subject tracker/chapter-progress.js',
+        'features/subject tracker/subject-screens.js',
+        'features/subject tracker/exam-widget.js',
+        'features/subject tracker/list.js',
+        'features/subject tracker/basics.js',
+        'features/subject tracker/sources.js',
+        'features/subject tracker/sources-detail.js',
+        /* NOTES: per-topic notes screen — topic.js ke row-click se khulti
+           hai (window.Notes.open), isliye topic.js se PEHLE load ho. */
+        'features/subject tracker/notes.js',
+        'features/subject tracker/topic.js',
+        'features/subject tracker/rivision.js',
+        'features/subject tracker/test.js',
+        'features/subject tracker/doubt.js',
+        'features/subject tracker/error.js',
+        'features/subject tracker/SubjectSetting.js',
+        'features/canvas/canvas.js',
+        'features/canvas/canvas-editor.js',
+        'features/canvas/canvas-cards.js',
+        'features/canvas/canvas-lines.js',
+        'features/canvas/canvas-groups.js',
+        /* TEMPLATE: layout-template registry + Both-Sides layout. canvas-editor
+           ke Settings gear se chalta hai; CanvasCards/Lines ke render ko use
+           karta hai isliye unke BAAD load hona chahiye. */
+        'features/canvas/template.js',
+        /* CANVAS-PRESENT: Present/Revise mode. canvas-cards/lines ke render ke
+           BAAD (data-cid / data-lid elements chahiye) aur editor ke baad (api). */
+        'features/canvas/canvas-present.js',
+        'features/canvas/canvas-ai.js',
+        'features/timer/timer-bridge.js',
+        'features/timer/timer.js',
+        'features/goals/goal-list.js',
+        'features/goals/goal-heat.js',
+        'features/goals/goal-task.js',
+        'features/goals/goal-detail.js',
+        'features/goals/study-goals.js',
+        'features/habit/GoodSystem.js',
+        'features/habit/BadSystem.js',
+        /* HABIT-TYPES: good-list.js se PEHLE zaroori (good-list isi se type-logic
+           leta hai), aur subject-store.js + study-timer.js ke BAAD (kyunki ye
+           ST.recordStudy ko wrap karta hai aur ST.CATS use karta hai). */
+        'features/habit/habit-types.js',
+        'features/habit/good-list.js',
+        'features/habit/bad-list.js',
+        'features/habit/bad-detail.js',
+        'features/habit/challenge-list.js',
+        'features/habit/good-detail.js',
+        /* STUDY-HABIT: default "Study" card. good-detail.js ke BAAD zaroori hai
+           (boot par ensure()+sync() ke liye GoodList aur GoodDetail chahiye),
+           aur subject-store/study-timer ke baad (ST.studyStore read + wrap). */
+        'features/habit/study-habit.js',
+        /* FOCUS-SHIELD (Phase 1) : app-blocking rules + Settings section.
+           study-habit.js ke BAAD zaroori hai (Study card se target-state padhta
+           hai) aur backend/settings.js se PEHLE (settings screen isi ka
+           AchivaFocusUI.buildSection() section banati hai). */
+        'features/focus/focus-store.js',
+        'features/focus/focus-ui.js',
+        'features/habit/good-system-scenarios.js',
+        'features/thought/store.js',
+        'features/thought/graph.js',
+        'features/thought/main.js',
+        'features/thought/detail.js',
+        'features/thought/ai.js',
+        'features/task/task.js',
+        'backend/email-config.js',
+        'backend/firebase-config.js',
+        'backend/cloud.js',
+        'backend/auth.js',
+        'backend/backup.js',
+        'backend/settings.js',
+        'core/app-shell.js',
+        'core/boot.js',
+        /* KATEX (math rendering — notes.js Read view). Sabse AAKHIR mein:
+           ~300KB parse se app boot delay na ho. Fail-safe: load na ho
+           to MathRender.available() false → notes Read view formulas
+           raw $..$ text dikhata hai + hint, app kabhi rukti nahi.
+           math-render.js inke BAAD (window.katex use karta hai). */
+        'vendor/katex/katex.min.js',
+        'vendor/katex/contrib/mhchem.min.js',   /* \ce{...} chemistry eqs */
+        /* MARKDOWN LAYER (notes Read view): markdown-it parser + DOMPurify
+           sanitizer. math-render.js ka RICH path in dono par chalta hai;
+           koi ek bhi load na ho to purana PLAIN renderer fallback hai
+           (content kabhi lost nahi). */
+        'vendor/markdown-it/markdown-it.min.js',
+        'vendor/purify/purify.min.js',
+        'ai/math-render.js',
+        /* NOTES-AI (Phase 2): Notes screen ke ✨ AI button ka popup —
+           Copy Prompt (external AI ke liye) + paste + Preview + Save.
+           math-render ke BAAD (Preview isi se render hota hai). */
+        'ai/notes-ai.js'
+      ];
+      var storageReady = false, docReady = false, started = false;
+      function loadNext(i) {
+        if (i >= SRC.length) return;
+        var s = document.createElement('script');
+        s.src = SRC[i];
+        s.onload = function () { loadNext(i + 1); };
+        /* ek file 404 ho to baaki app na ruke — LEKIN naav record ho taaki
+           AI buttons waghaira "silent dead" na lagein */
+        s.onerror = function () {
+          (window.__ACHIVA_LOAD_ERRORS = window.__ACHIVA_LOAD_ERRORS || []).push(SRC[i]);
+          loadNext(i + 1);
+        };
+        document.head.appendChild(s);
+      }
+      function tryStart() {
+        if (started || !storageReady || !docReady) return;
+        started = true;
+        window.clearTimeout(failsafe);
+        loadNext(0);
+      }
+      /* Failsafe: open() atak jaye to 6s baad storage-ready maan lo —
+         AppStorage ka localStorage fallback pehle se seeded hota hai,
+         app LS mode mein chal padegi. */
+      var failsafe = window.setTimeout(function () { storageReady = true; tryStart(); }, 6000);
+      if (window.AppStorage && window.AppStorage.open) {
+        window.AppStorage.open().then(function () { storageReady = true; tryStart(); },
+                                      function () { storageReady = true; tryStart(); });
+      } else { storageReady = true; }
+      if (document.readyState === 'complete') { docReady = true; }
+      else window.addEventListener('load', function () { docReady = true; tryStart(); });
+      tryStart();
+    })();
+  </script>
+
+  <!-- ==============================================
+       BACKEND : Firebase (login + manual backup)
+       • Firebase compat SDK (CDN) — window.firebase banata hai
+       • phir hamari 5 backend files (order zaroori hai)
+       Config na bhari ho to ye sab chup-chaap band rehta hai,
+       app pehle jaisa chalti hai (gate par message dikhta hai).
+  =============================================== -->
+  <script src="https://www.gstatic.com/firebasejs/12.18.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/12.18.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/12.18.0/firebase-firestore-compat.js"></script>
+  <!-- backend ki 5 local files (firebase-config → cloud → auth →
+       backup → settings) ab upar wale loader ke SRC manifest mein
+       hain — order bilkul same, firebase CDN ke baad. -->
+
+  <!-- GOOGLE-FIX (native sign-in): Web client ID yahan paste karo
+       (Firebase Console → Authentication → Sign-in method → Google →
+       Web SDK configuration → "Web client ID"):
+       window.ACHIVA_GOOGLE_WEB_CLIENT_ID = "698527829835-xxxx.apps.googleusercontent.com";
+       Khaali raha to: (1) APK gradle ki GOOGLE_WEB_CLIENT_ID use karega,
+       (2) dono khaali → purana WebView redirect flow (pehle jaisa). -->
+  <script>
+    window.ACHIVA_GOOGLE_WEB_CLIENT_ID = "";
+  </script>
+
+  <!-- header ka own chhota sa script : sirf live date
+       (theme toggle ab Settings sheet mein hai → backend/settings.js) -->
+  <script>
+    (function () {
+      'use strict';
+      /* date chip : "TUE · 15 SEPT" format */
+      var d = new Date();
+      var days = ['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'];
+      var months = ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEPT', 'OCT', 'NOV', 'DEC'];
+      document.getElementById('dateChip').textContent =
+        days[d.getDay()] + ' · ' + d.getDate() + ' ' + months[d.getMonth()];
+    })();
+  </script>
+
+  <!-- FLOATING NAV BUTTON + coming-soon screens : code ab
+       core/app-shell.js mein hai (loader manifest, backend ke baad).
+       Logic bilkul unchanged — sirf inline se file mein gaya. -->
+
+  <!-- BACKEND BOOT : code ab core/boot.js mein hai (loader manifest
+       ki aakhri entry). Logic bilkul unchanged. -->
+</body>
+</html>
