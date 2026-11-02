@@ -1,12 +1,13 @@
 {
-  "version_code": 121,
-  "version_name": "1.0.21",
+  "version_code": 122,
+  "version_name": "1.0.22",
   "min_supported_version_code": 1,
   "changelog": [
-    "Fixed bootstrap install failing at verification ('Shell verification test failed: CANNOT LINK EXECUTABLE ... libandroid-support.so not found')",
-    "All Termux binaries now resolve their libraries from this app's own environment via LD_LIBRARY_PATH (the bootstrap binaries carry a hardcoded com.termux runpath that is unreadable under a different package name)",
-    "Fixed library resolution for the local server, terminal sessions, extension host, backup/restore scripts and MCP servers",
-    "termux-api dispatcher shebang and temp paths now follow the app's real package name"
+    "Fixed terminal failing with 'exec(.../usr/bin/login): Permission denied' — the rootfs' login script has a hardcoded #!/data/data/com.termux shebang that points into the ORIGINAL Termux app's private dir, which this app cannot execute",
+    "All rootfs scripts (login, termux-tools, dpkg hooks, 730+ files) with hardcoded /data/data/com.termux paths are now rewritten to this app's own package dir",
+    "400+ symlinks (vi, vim, editor, pager, lua, ...) with dangling absolute com.termux targets are now recreated with the correct path",
+    "termux-exec now gets the runtime prefix via TERMUX__PREFIX / TERMUX_APP__DATA_DIR env so POSIX shebangs resolve to the right app",
+    "No re-download needed: the fix is applied once at first terminal/server start after updating"
   ],
   "is_critical": false
 }

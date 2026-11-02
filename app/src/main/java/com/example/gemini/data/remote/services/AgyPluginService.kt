@@ -199,6 +199,9 @@ class AgyPluginService(
                         if (!envMap.containsKey("LD_LIBRARY_PATH")) {
                             envMap["LD_LIBRARY_PATH"] = "$termuxFilesDir/usr/lib"
                         }
+                        // termux-exec v2 runtime prefix override (compiled-in prefix is com.termux)
+                        envMap["TERMUX__PREFIX"] = "$termuxFilesDir/usr"
+                        envMap["TERMUX_APP__DATA_DIR"] = "/data/data/${com.example.gemini.BuildConfig.APPLICATION_ID}"
                         if (!envMap.containsKey("PATH")) {
                             envMap["PATH"] = "$termuxFilesDir/home/.local/bin:$termuxFilesDir/usr/bin:/system/bin"
                         }

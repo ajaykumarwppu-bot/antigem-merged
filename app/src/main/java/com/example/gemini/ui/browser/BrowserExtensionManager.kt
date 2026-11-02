@@ -192,14 +192,16 @@ class BrowserExtensionManager private constructor() {
                 if (it.isDirectory) command.addAll(listOf("--extra-root", it.absolutePath))
             }
             val builder = ProcessBuilder(command).directory(LocalEnvironmentManager.getHomeDir(context)).redirectErrorStream(true)
-            builder.environment().putAll(mapOf("HOME" to LocalEnvironmentManager.getHomeDir(context).absolutePath,
+            val hostEnv = mutableMapOf("HOME" to LocalEnvironmentManager.getHomeDir(context).absolutePath,
                 "PREFIX" to LocalEnvironmentManager.getPrefixDir(context).absolutePath,
                 "PATH" to "${LocalEnvironmentManager.getBinDir(context).absolutePath}:/system/bin",
                 "TMPDIR" to LocalEnvironmentManager.getTmpDir(context).absolutePath,
                 // Termux node is a bionic ELF whose DT_RUNPATH points at com.termux; the app's own
                 // $PREFIX/lib must be on LD_LIBRARY_PATH so its shared libs resolve under this package.
                 "LD_LIBRARY_PATH" to LocalEnvironmentManager.getLibDir(context).absolutePath,
-                "AGY_PARENT_PID" to android.os.Process.myPid().toString()))
+                "AGY_PARENT_PID" to android.os.Process.myPid().toString())
+            LocalEnvironmentManager.applyTermuxRuntimeEnv(hostEnv, context)
+            builder.environment().putAll(hostEnv)
             hostProcess = builder.start()
             val process = hostProcess!!
             scope.launch { process.inputStream.bufferedReader().useLines { lines -> lines.forEach { Log.d(TAG, it) } } }

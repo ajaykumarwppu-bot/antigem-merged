@@ -301,6 +301,10 @@ class AgyMcpManager(
                             if (!envMap.containsKey("LD_LIBRARY_PATH")) {
                                 envMap["LD_LIBRARY_PATH"] = "$termuxFilesDir/usr/lib"
                             }
+                            // termux-exec v2 resolves its prefix from these runtime vars instead of the
+                            // compiled-in com.termux path — required for POSIX shebangs (#!/usr/bin/env).
+                            envMap["TERMUX__PREFIX"] = "$termuxFilesDir/usr"
+                            envMap["TERMUX_APP__DATA_DIR"] = "/data/data/${com.example.gemini.BuildConfig.APPLICATION_ID}"
                             if (!envMap.containsKey("PATH")) {
                                 envMap["PATH"] = "$termuxFilesDir/home/.local/bin:$termuxFilesDir/usr/bin:/system/bin"
                             }
