@@ -1958,10 +1958,19 @@ object LocalEnvironmentManager {
      * termux-exec v2 (libtermux-exec-ld-preload.so) resolves its prefix from these runtime
      * env vars instead of the compiled-in /data/data/com.termux path. Without them it would
      * map POSIX shebangs (#!/usr/bin/env) into the ORIGINAL Termux app's private dir.
+     *
+     * OPENSSL_CONF: termux-built node ships OpenSSL with the compiled-in config path
+     * /data/data/com.termux/files/usr/etc/tls/openssl.cnf, which is unreadable under any
+     * other package (SELinux). The moment node touches crypto it dies with EACCES (exit 13)
+     * — this killed the browser extension host and with it the google_flow MCP. Pointing
+     * OPENSSL_CONF at THIS package's own openssl.cnf overrides the compiled-in path.
      */
     fun applyTermuxRuntimeEnv(env: MutableMap<String, String>, context: Context) {
         env["TERMUX__PREFIX"] = getPrefixDir(context).absolutePath
         env["TERMUX_APP__DATA_DIR"] = "/data/data/${context.packageName}"
+        val opensslCnf = File(getPrefixDir(context), "etc/tls/openssl.cnf")
+        // Only export it when the file really exists — a dangling OPENSSL_CONF is worse than none.
+        if (opensslCnf.isFile) env["OPENSSL_CONF"] = opensslCnf.absolutePath
     }
 
     fun ensureGlibcEnvironment(context: Context): Boolean {
@@ -2267,6 +2276,8 @@ export PREFIX="${prefixDir.absolutePath}"
 export HOME="${homeDir.absolutePath}"
 export PATH="${homeDir.absolutePath}/.local/bin:${binDir.absolutePath}:${binDir.absolutePath}/applets:/system/bin:/system/xbin"
 export LD_LIBRARY_PATH="${prefixDir.absolutePath}/lib${'$'}{LD_LIBRARY_PATH:+:${'$'}LD_LIBRARY_PATH}"
+# node's compiled-in OpenSSL config lives in the ORIGINAL Termux dir (unreadable here)
+[ -f "${prefixDir.absolutePath}/etc/tls/openssl.cnf" ] && export OPENSSL_CONF="${prefixDir.absolutePath}/etc/tls/openssl.cnf"
 export TMPDIR="${prefixDir.absolutePath}/tmp"
 export TERM="xterm-256color"
 export COLORTERM="truecolor"
@@ -2310,6 +2321,8 @@ fi
 export HOME="${homeDir.absolutePath}"
 export PATH="${homeDir.absolutePath}/.local/bin:${binDir.absolutePath}:${binDir.absolutePath}/applets:/system/bin:/system/xbin"
 export LD_LIBRARY_PATH="${prefixDir.absolutePath}/lib${'$'}{LD_LIBRARY_PATH:+:${'$'}LD_LIBRARY_PATH}"
+# node's compiled-in OpenSSL config lives in the ORIGINAL Termux dir (unreadable here)
+[ -f "${prefixDir.absolutePath}/etc/tls/openssl.cnf" ] && export OPENSSL_CONF="${prefixDir.absolutePath}/etc/tls/openssl.cnf"
 export TMPDIR="${prefixDir.absolutePath}/tmp"
 export TERM="xterm-256color"
 export COLORTERM="truecolor"

@@ -1,13 +1,15 @@
 {
-  "version_code": 122,
-  "version_name": "1.0.22",
+  "version_code": 123,
+  "version_name": "1.0.23",
   "min_supported_version_code": 1,
   "changelog": [
-    "Fixed terminal failing with 'exec(.../usr/bin/login): Permission denied' — the rootfs' login script has a hardcoded #!/data/data/com.termux shebang that points into the ORIGINAL Termux app's private dir, which this app cannot execute",
-    "All rootfs scripts (login, termux-tools, dpkg hooks, 730+ files) with hardcoded /data/data/com.termux paths are now rewritten to this app's own package dir",
-    "400+ symlinks (vi, vim, editor, pager, lua, ...) with dangling absolute com.termux targets are now recreated with the correct path",
-    "termux-exec now gets the runtime prefix via TERMUX__PREFIX / TERMUX_APP__DATA_DIR env so POSIX shebangs resolve to the right app",
-    "No re-download needed: the fix is applied once at first terminal/server start after updating"
+    "FIXED google_flow MCP: node extension host died with exit 13 the moment it touched crypto — termux-built node ships OpenSSL with the compiled-in /data/data/com.termux config path which is SELinux-blocked for this package. All node spawns (extension host, stdio MCP servers, plugin MCP servers, terminal login shells) now get OPENSSL_CONF pointed at this package's own usr/etc/tls/openssl.cnf",
+    "NEW Achiva Agent Control: the AI agent can now read and manage Achiva — new achiva_mcp MCP server (add via Settings → MCP → Quick Presets → 'Achiva Control') with 10 tools",
+    "achiva_get_state: see tasks, subjects/chapters, goals, good/bad habits, exams, study sessions and thoughts with a quick summary",
+    "achiva_add_task / achiva_toggle_task: plan tasks (one-time, daily/weekly/monthly/every-N-days, priority) and mark them done",
+    "achiva_add_subject / achiva_add_chapter / achiva_log_study: manage the subject tracker and log study sessions (backdated supported)",
+    "achiva_add_goal / achiva_add_habit / achiva_add_exam / achiva_add_thought: goals, habits, exam countdowns and text thoughts",
+    "Achiva bridge works in hosted-web mode too: the bridge script is injected into the Achiva page on every load"
   ],
   "is_critical": false
 }

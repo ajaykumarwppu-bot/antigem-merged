@@ -550,6 +550,12 @@ private fun McpPage(deps: ClaudeSettingsDeps) {
             url = "http://127.0.0.1:${com.example.gemini.data.remote.AndroidLocalBridgeServer.DEFAULT_PORT}/terminal",
             headers = if (deviceId.isNotBlank()) mapOf("X-Device-Id" to deviceId) else emptyMap()
         ),
+        "Achiva Control" to ClaudeMcpAddRequest(
+            name = "achiva_mcp",
+            transport = "http",
+            url = "http://127.0.0.1:${com.example.gemini.data.remote.AndroidLocalBridgeServer.DEFAULT_PORT}/achiva",
+            headers = if (deviceId.isNotBlank()) mapOf("X-Device-Id" to deviceId) else emptyMap()
+        ),
         "Android Automation" to ClaudeMcpAddRequest(
             name = com.example.gemini.data.remote.AndroidLocalBridgeServer.ANDROID_AUTOMATION_MCP_NAME,
             transport = "http",

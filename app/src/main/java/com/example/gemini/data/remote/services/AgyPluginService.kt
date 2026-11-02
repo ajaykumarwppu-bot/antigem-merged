@@ -202,6 +202,12 @@ class AgyPluginService(
                         // termux-exec v2 runtime prefix override (compiled-in prefix is com.termux)
                         envMap["TERMUX__PREFIX"] = "$termuxFilesDir/usr"
                         envMap["TERMUX_APP__DATA_DIR"] = "/data/data/${com.example.gemini.BuildConfig.APPLICATION_ID}"
+                        // Termux node binaries ship OpenSSL with the compiled-in com.termux config path,
+                        // which is unreadable under this package (SELinux) — node dies (exit 13) the
+                        // moment a plugin's stdio MCP server touches crypto. Point it at our own openssl.cnf.
+                        if (!envMap.containsKey("OPENSSL_CONF") && java.io.File("$termuxFilesDir/usr/etc/tls/openssl.cnf").exists()) {
+                            envMap["OPENSSL_CONF"] = "$termuxFilesDir/usr/etc/tls/openssl.cnf"
+                        }
                         if (!envMap.containsKey("PATH")) {
                             envMap["PATH"] = "$termuxFilesDir/home/.local/bin:$termuxFilesDir/usr/bin:/system/bin"
                         }

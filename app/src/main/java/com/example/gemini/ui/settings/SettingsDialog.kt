@@ -2700,6 +2700,11 @@ private fun McpSubScreen(
                     serverUrl = "http://127.0.0.1:${com.example.gemini.data.remote.AndroidLocalBridgeServer.DEFAULT_PORT}/terminal",
                     headers = if (deviceId.isNotBlank()) mapOf("X-Device-Id" to deviceId) else emptyMap()
                 )),
+                Triple("Achiva Control", "SSE", com.example.gemini.domain.model.McpServerSpec(
+                    serverName = "achiva_mcp",
+                    serverUrl = "http://127.0.0.1:${com.example.gemini.data.remote.AndroidLocalBridgeServer.DEFAULT_PORT}/achiva",
+                    headers = if (deviceId.isNotBlank()) mapOf("X-Device-Id" to deviceId) else emptyMap()
+                )),
                 Triple("Android Automation", "SSE", com.example.gemini.domain.model.McpServerSpec(
                     serverName = com.example.gemini.data.remote.AndroidLocalBridgeServer.ANDROID_AUTOMATION_MCP_NAME,
                     serverUrl = "http://127.0.0.1:${com.example.gemini.data.remote.AndroidLocalBridgeServer.DEFAULT_PORT}/android",

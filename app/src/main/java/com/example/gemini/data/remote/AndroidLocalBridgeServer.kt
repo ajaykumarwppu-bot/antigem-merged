@@ -30,7 +30,8 @@ class AndroidLocalBridgeServer private constructor() {
         TERMINAL("terminal_mcp"),
         GOOGLE_FLOW("google_flow_mcp"),
         EXTENSION_DEVELOPER("custom_plugin_developer_mcp"),
-        ANDROID("android_automation_mcp")
+        ANDROID("android_automation_mcp"),
+        ACHIVA("achiva_mcp")
     }
 
     companion object {
@@ -250,6 +251,7 @@ class AndroidLocalBridgeServer private constructor() {
                     path == "/extension_developer" -> handleMcpHttp(McpEndpoint.EXTENSION_DEVELOPER, method, body, out)
                     path == "/google_flow" -> handleMcpHttp(McpEndpoint.GOOGLE_FLOW, method, body, out)
                     path == "/android" -> handleMcpHttp(McpEndpoint.ANDROID, method, body, out)
+                    path == "/achiva" -> handleMcpHttp(McpEndpoint.ACHIVA, method, body, out)
                     path == "/api/health" -> {
                         val res = JSONObject().apply {
                             put("status", "ok")
@@ -278,7 +280,7 @@ class AndroidLocalBridgeServer private constructor() {
             if (out != null && req != null && !out.used) {
                 runCatching {
                     val path = req.rawPath.substringBefore("?")
-                    if (path == "/browser" || path == "/terminal" || path == "/google_flow" || path == "/extension_developer" || path == "/android") {
+                    if (path == "/browser" || path == "/terminal" || path == "/google_flow" || path == "/extension_developer" || path == "/android" || path == "/achiva") {
                         val id = runCatching { JSONObject(req.body).opt("id") }.getOrNull()
                         sendResponse(out, 200, "application/json", jsonRpcError(id, -32603, "Internal error: ${t.message ?: t.javaClass.simpleName}").toString())
                     } else {
@@ -410,6 +412,7 @@ class AndroidLocalBridgeServer private constructor() {
                 val result = JSONObject().apply {
                     put("protocolVersion", "2024-11-05")
                     if (endpoint == McpEndpoint.ANDROID) put("instructions", com.example.gemini.data.automation.AndroidAutomation.INSTRUCTIONS)
+                    if (endpoint == McpEndpoint.ACHIVA) put("instructions", "Tools to read and control the built-in Achiva productivity app (its own screen in this app). Start with achiva_get_state to see the user's tasks, subjects/chapters, goals, habits, exams, study sessions and thoughts; then use achiva_add_task / achiva_toggle_task / achiva_add_subject / achiva_add_chapter / achiva_log_study / achiva_add_goal / achiva_add_habit / achiva_add_exam / achiva_add_thought to plan and manage everything on the user's behalf. Subjects and chapters can be matched by id or by (partial) name.")
                     if (endpoint == McpEndpoint.EXTENSION_DEVELOPER) put("instructions", "Start with webview_extension_docs. Read developer-mcp.md and the required API references, create a draft, write files, install or update, discover tools with webview_extension_test, and inspect logs to fix failures. No app source or manual ZIP handling is needed.")
                     put("capabilities", JSONObject().apply {
                         put("tools", JSONObject())
@@ -463,6 +466,7 @@ class AndroidLocalBridgeServer private constructor() {
         val browserEnabled = endpoint == McpEndpoint.BROWSER
         val terminalEnabled = endpoint == McpEndpoint.TERMINAL
         val flowEnabled = endpoint == McpEndpoint.GOOGLE_FLOW
+        val achivaEnabled = endpoint == McpEndpoint.ACHIVA
 
         if (browserEnabled) {
             // 1. Browser Open URL
@@ -780,12 +784,163 @@ class AndroidLocalBridgeServer private constructor() {
             }
         }
 
+        if (achivaEnabled) {
+            fun achivaTool(name: String, description: String, props: JSONObject, required: Array<String>) {
+                tools.put(JSONObject().apply {
+                    put("name", name)
+                    put("description", description)
+                    put("inputSchema", JSONObject().apply {
+                        put("type", "object")
+                        put("properties", props)
+                        if (required.isNotEmpty()) {
+                            put("required", JSONArray().apply { required.forEach { put(it) } })
+                        }
+                    })
+                })
+            }
+
+            achivaTool(
+                "achiva_get_state",
+                "Read the user's Achiva productivity data. Returns a summary (today's pending tasks, active goals, upcoming exams, total study time) plus the raw domains you asked for. Call this first before toggling tasks or logging study time so you have real ids and names.",
+                JSONObject().apply {
+                    put("keys", JSONObject().apply {
+                        put("type", "array")
+                        put("items", JSONObject().apply {
+                            put("type", "string")
+                            put("enum", JSONArray().apply {
+                                put("tasks"); put("subjects"); put("goals"); put("goodHabits"); put("badHabits"); put("exams"); put("studySessions"); put("thoughts")
+                            })
+                        })
+                        put("description", "Which domains to return (default: all). 'subjects' includes chapters; 'studySessions' are the study-time log entries.")
+                    })
+                },
+                emptyArray()
+            )
+            achivaTool(
+                "achiva_add_task",
+                "Create a task in Achiva's task planner (shows up on the Tasks screen and Dashboard). One-time tasks show on their date; repeating tasks recur.",
+                JSONObject().apply {
+                    put("name", JSONObject().apply { put("type", "string"); put("description", "Task name, e.g. 'Physics revision Ch 4'") })
+                    put("desc", JSONObject().apply { put("type", "string"); put("description", "Optional short description") })
+                    put("date", JSONObject().apply { put("type", "string"); put("description", "Date as YYYY-MM-DD (default: today)") })
+                    put("time", JSONObject().apply { put("type", "string"); put("description", "24h time HH:MM (default 09:00)") })
+                    put("repeat", JSONObject().apply {
+                        put("type", "string")
+                        put("enum", JSONArray().apply { put("none"); put("daily"); put("weekly"); put("monthly"); put("every") })
+                        put("description", "Repeat mode (default none). Use 'every' with every_n_days for custom intervals.")
+                    })
+                    put("every_n_days", JSONObject().apply { put("type", "integer"); put("description", "For repeat='every': interval in days (default 7)") })
+                    put("priority", JSONObject().apply {
+                        put("type", "string")
+                        put("enum", JSONArray().apply { put("High"); put("Medium"); put("Low") })
+                    })
+                },
+                arrayOf("name")
+            )
+            achivaTool(
+                "achiva_toggle_task",
+                "Mark a task occurrence done/undone for a given date (today by default). Get the task id from achiva_get_state.",
+                JSONObject().apply {
+                    put("id", JSONObject().apply { put("type", "string"); put("description", "Task id from achiva_get_state") })
+                    put("date", JSONObject().apply { put("type", "string"); put("description", "Occurrence date YYYY-MM-DD (default: today)") })
+                },
+                arrayOf("id")
+            )
+            achivaTool(
+                "achiva_add_subject",
+                "Add a subject to Achiva's subject tracker (e.g. Physics). Category is JEE or Boards (optional).",
+                JSONObject().apply {
+                    put("name", JSONObject().apply { put("type", "string") })
+                    put("category", JSONObject().apply {
+                        put("type", "string")
+                        put("enum", JSONArray().apply { put("jee"); put("boards") })
+                        put("description", "Optional subject category")
+                    })
+                },
+                arrayOf("name")
+            )
+            achivaTool(
+                "achiva_add_chapter",
+                "Add a chapter to a subject in Achiva's subject tracker. Subject can be matched by id or (partial) name.",
+                JSONObject().apply {
+                    put("subject", JSONObject().apply { put("type", "string"); put("description", "Subject id or (partial) name, e.g. 'Physics'") })
+                    put("name", JSONObject().apply { put("type", "string"); put("description", "Chapter name, e.g. 'Rotational Motion'") })
+                },
+                arrayOf("subject", "name")
+            )
+            achivaTool(
+                "achiva_log_study",
+                "Log a completed study session in Achiva's study timer history (subjects' progress and totals update). Use for backdated or verbally-reported sessions.",
+                JSONObject().apply {
+                    put("subject", JSONObject().apply { put("type", "string"); put("description", "Subject id or (partial) name") })
+                    put("chapter", JSONObject().apply { put("type", "string"); put("description", "Optional chapter id or (partial) name") })
+                    put("minutes", JSONObject().apply { put("type", "number"); put("description", "Session length in minutes") })
+                    put("category", JSONObject().apply {
+                        put("type", "string")
+                        put("enum", JSONArray().apply { put("learn"); put("practice"); put("revision"); put("notes"); put("habit"); put("other") })
+                        put("description", "Optional session category (default uncategorized)")
+                    })
+                    put("date", JSONObject().apply { put("type", "string"); put("description", "Optional YYYY-MM-DD for backdated sessions (default: just now)") })
+                    put("time", JSONObject().apply { put("type", "string"); put("description", "Optional HH:MM start time with date") })
+                },
+                arrayOf("subject", "minutes")
+            )
+            achivaTool(
+                "achiva_add_goal",
+                "Create a goal in Achiva's Goals screen (e.g. 'Finish syllabus by Feb'). Optional deadline date.",
+                JSONObject().apply {
+                    put("title", JSONObject().apply { put("type", "string") })
+                    put("category", JSONObject().apply {
+                        put("type", "string")
+                        put("enum", JSONArray().apply { put("Personal"); put("Professional"); put("Other") })
+                    })
+                    put("deadline", JSONObject().apply { put("type", "string"); put("description", "Optional deadline YYYY-MM-DD") })
+                    put("note", JSONObject().apply { put("type", "string") })
+                },
+                arrayOf("title")
+            )
+            achivaTool(
+                "achiva_add_habit",
+                "Create a habit in Achiva: good habit (build, with reps/day) or bad habit (quit).",
+                JSONObject().apply {
+                    put("name", JSONObject().apply { put("type", "string"); put("description", "e.g. 'Drink water' (good) or 'Late night scrolling' (bad)") })
+                    put("kind", JSONObject().apply {
+                        put("type", "string")
+                        put("enum", JSONArray().apply { put("good"); put("bad") })
+                        put("description", "Default: good")
+                    })
+                    put("reps_per_day", JSONObject().apply { put("type", "integer"); put("description", "Good habits only: repetitions per day (default 1)") })
+                },
+                arrayOf("name")
+            )
+            achivaTool(
+                "achiva_add_exam",
+                "Add an exam to Achiva's exam tracker (shows the countdown widget on subject screens).",
+                JSONObject().apply {
+                    put("name", JSONObject().apply { put("type", "string"); put("description", "e.g. 'JEE Mains Mock 3'") })
+                    put("date", JSONObject().apply { put("type", "string"); put("description", "YYYY-MM-DD") })
+                    put("time", JSONObject().apply { put("type", "string"); put("description", "Optional HH:MM (default 09:00)") })
+                },
+                arrayOf("name", "date")
+            )
+            achivaTool(
+                "achiva_add_thought",
+                "Save a text thought/note/idea into Achiva's Thoughts feature (appears on today's thought list with transcript).",
+                JSONObject().apply {
+                    put("content", JSONObject().apply { put("type", "string"); put("description", "The thought text") })
+                    put("name", JSONObject().apply { put("type", "string"); put("description", "Optional short title (default: first 40 chars)") })
+                },
+                arrayOf("content")
+            )
+        }
+
         return tools
     }
 
     private suspend fun executeMcpToolCall(toolName: String, args: JSONObject): JSONObject {
         if (toolName.startsWith("webview_extension_")) return com.example.gemini.ui.browser.WebViewExtensionDeveloper.call(appContext!!, toolName, args)
         if (toolName.startsWith("android_")) return com.example.gemini.data.automation.AndroidAutomation.call(appContext!!, toolName, args)
+        if (toolName.startsWith("achiva_")) return com.example.gemini.ui.achiva.AchivaWebBridge.callMcpTool(toolName, args)
 
         if (toolName.startsWith("flow_")) {
             return com.example.gemini.ui.browser.BrowserExtensionManager.instance.callTool("google-flow", toolName, args)

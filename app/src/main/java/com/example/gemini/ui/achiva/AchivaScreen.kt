@@ -79,6 +79,15 @@ fun AchivaScreen() {
             .build()
     }
 
+    // Agent bridge: assets/achiva-bridge/agent-bridge.js text (ek hi baar load hota hai)
+    val bridgeScript = remember {
+        try {
+            context.assets.open("achiva-bridge/agent-bridge.js").bufferedReader().use { it.readText() }
+        } catch (_: Exception) {
+            null
+        }
+    }
+
     val webView = remember {
         WebView(context).apply {
             layoutParams = ViewGroup.LayoutParams(
@@ -95,6 +104,11 @@ fun AchivaScreen() {
             // Firebase/Google sign-in ke liye cookies (3rd-party consent pages)
             CookieManager.getInstance().setAcceptCookie(true)
             CookieManager.getInstance().setAcceptThirdPartyCookies(this, true)
+            // Achiva Agent Bridge: agent (MCP achiva_mcp) isi WebView ko control karta hai.
+            // Hooks page ki taraf se sirf notifyReady/notify call karte hain — commands
+            // sirf Kotlin → JS direction mein evaluateJavascript se jaate hain.
+            addJavascriptInterface(AchivaWebBridge.jsHooks, "AchivaBridge")
+            AchivaWebBridge.attach(this)
 
             webViewClient = object : WebViewClient() {
                 override fun shouldInterceptRequest(
@@ -125,6 +139,9 @@ fun AchivaScreen() {
 
                 override fun onPageFinished(view: WebView, url: String?) {
                     isLoading = false
+                    // Har (re)load par agent bridge dobara inject karo — hosted page
+                    // navigate/reload par naya document bana leta hai.
+                    bridgeScript?.let { AchivaWebBridge.inject(view, it) }
                 }
 
                 override fun doUpdateVisitedHistory(
