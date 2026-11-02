@@ -196,6 +196,9 @@ class BrowserExtensionManager private constructor() {
                 "PREFIX" to LocalEnvironmentManager.getPrefixDir(context).absolutePath,
                 "PATH" to "${LocalEnvironmentManager.getBinDir(context).absolutePath}:/system/bin",
                 "TMPDIR" to LocalEnvironmentManager.getTmpDir(context).absolutePath,
+                // Termux node is a bionic ELF whose DT_RUNPATH points at com.termux; the app's own
+                // $PREFIX/lib must be on LD_LIBRARY_PATH so its shared libs resolve under this package.
+                "LD_LIBRARY_PATH" to LocalEnvironmentManager.getLibDir(context).absolutePath,
                 "AGY_PARENT_PID" to android.os.Process.myPid().toString()))
             hostProcess = builder.start()
             val process = hostProcess!!

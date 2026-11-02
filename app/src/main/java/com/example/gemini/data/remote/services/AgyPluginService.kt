@@ -185,16 +185,22 @@ class AgyPluginService(
                     serverSpecObj.put("args", argsArr)
 
                     val envMap = cmdEntry.env.toMutableMap()
-                    // Android / Termux environment loader injection
-                    val isAndroidTermux = java.io.File("/data/data/com.termux/files/usr/lib/libtermux-exec.so").exists() ||
+                    // Android / Termux environment loader injection.
+                    // Paths must follow THIS app's package (fork builds ship under a different
+                    // applicationId), so they are derived from BuildConfig, not hardcoded com.termux.
+                    val termuxFilesDir = "/data/data/${com.example.gemini.BuildConfig.APPLICATION_ID}/files"
+                    val isAndroidTermux = java.io.File("$termuxFilesDir/usr/lib/libtermux-exec.so").exists() ||
                                           System.getenv("PREFIX") != null ||
                                           (System.getProperty("java.vendor")?.contains("Android", ignoreCase = true) == true)
                     if (isAndroidTermux) {
-                        if (!envMap.containsKey("LD_PRELOAD") && java.io.File("/data/data/com.termux/files/usr/lib/libtermux-exec.so").exists()) {
-                            envMap["LD_PRELOAD"] = "/data/data/com.termux/files/usr/lib/libtermux-exec.so"
+                        if (!envMap.containsKey("LD_PRELOAD") && java.io.File("$termuxFilesDir/usr/lib/libtermux-exec.so").exists()) {
+                            envMap["LD_PRELOAD"] = "$termuxFilesDir/usr/lib/libtermux-exec.so"
+                        }
+                        if (!envMap.containsKey("LD_LIBRARY_PATH")) {
+                            envMap["LD_LIBRARY_PATH"] = "$termuxFilesDir/usr/lib"
                         }
                         if (!envMap.containsKey("PATH")) {
-                            envMap["PATH"] = "/data/data/com.termux/files/home/.local/bin:/data/data/com.termux/files/usr/bin:/system/bin"
+                            envMap["PATH"] = "$termuxFilesDir/home/.local/bin:$termuxFilesDir/usr/bin:/system/bin"
                         }
                     }
 

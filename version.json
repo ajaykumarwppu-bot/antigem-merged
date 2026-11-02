@@ -1,12 +1,12 @@
 {
-  "version_code": 120,
-  "version_name": "1.0.20",
+  "version_code": 121,
+  "version_name": "1.0.21",
   "min_supported_version_code": 1,
   "changelog": [
-    "Fixed Linux environment showing only the 55 MB Ubuntu rootfs: the merged app now installs the full ~350 MB Termux bootstrap exactly like the original app",
-    "Fixed 'this server did not start': the local AI server now boots correctly inside the full Termux environment",
-    "Moved local server ports to 1238/1239/8769 so AntiGem Achiva can run side by side with the original AntiGem without port conflicts",
-    "In-app updates now come from this merged repository instead of the original antiGem repo"
+    "Fixed bootstrap install failing at verification ('Shell verification test failed: CANNOT LINK EXECUTABLE ... libandroid-support.so not found')",
+    "All Termux binaries now resolve their libraries from this app's own environment via LD_LIBRARY_PATH (the bootstrap binaries carry a hardcoded com.termux runpath that is unreadable under a different package name)",
+    "Fixed library resolution for the local server, terminal sessions, extension host, backup/restore scripts and MCP servers",
+    "termux-api dispatcher shebang and temp paths now follow the app's real package name"
   ],
   "is_critical": false
 }

@@ -291,12 +291,18 @@ class AgyMcpManager(
                                 put("cwd", spec.cwd)
                             }
                             val envMap = spec.env.toMutableMap()
-                            // Ensure Termux stdio binaries (npx, python3, etc.) have proper loader and PATH on Android
-                            if (!envMap.containsKey("LD_PRELOAD")) {
-                                envMap["LD_PRELOAD"] = "/data/data/com.termux/files/usr/lib/libtermux-exec.so"
+                            // Ensure Termux stdio binaries (npx, python3, etc.) have proper loader and PATH on Android.
+                            // Paths must follow THIS app's package (fork builds ship under a different applicationId),
+                            // so they are derived from BuildConfig instead of a hardcoded com.termux prefix.
+                            val termuxFilesDir = "/data/data/${com.example.gemini.BuildConfig.APPLICATION_ID}/files"
+                            if (!envMap.containsKey("LD_PRELOAD") && java.io.File("$termuxFilesDir/usr/lib/libtermux-exec.so").exists()) {
+                                envMap["LD_PRELOAD"] = "$termuxFilesDir/usr/lib/libtermux-exec.so"
+                            }
+                            if (!envMap.containsKey("LD_LIBRARY_PATH")) {
+                                envMap["LD_LIBRARY_PATH"] = "$termuxFilesDir/usr/lib"
                             }
                             if (!envMap.containsKey("PATH")) {
-                                envMap["PATH"] = "/data/data/com.termux/files/home/.local/bin:/data/data/com.termux/files/usr/bin:/system/bin"
+                                envMap["PATH"] = "$termuxFilesDir/home/.local/bin:$termuxFilesDir/usr/bin:/system/bin"
                             }
                             if (envMap.isNotEmpty()) {
                                 val envObj = org.json.JSONObject()
