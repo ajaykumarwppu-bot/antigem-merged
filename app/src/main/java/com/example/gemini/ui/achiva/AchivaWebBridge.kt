@@ -108,7 +108,7 @@ object AchivaWebBridge {
             .put("error", "Achiva screen is not initialized. Open the Achiva tab once and let it finish loading, then retry.")
         val js = "window.AchivaAgent && window.AchivaAgent.__handle(" + JSONObject.quote(cmd.toString()) + ")"
         val raw = withTimeoutOrNull(15_000L) {
-            suspendCancellableCoroutine { cont ->
+            suspendCancellableCoroutine<String> { cont ->
                 main.post {
                     try {
                         wv.evaluateJavascript(js) { value ->
