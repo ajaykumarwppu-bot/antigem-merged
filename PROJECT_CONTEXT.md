@@ -1,6 +1,6 @@
 # AntiGem Project Context (handover file for any new chat/session)
 
-Last updated: 2026-11-03. Current state: **v1.0.23 released, CI green.**
+Last updated: 2026-11-03. Current state: **v1.0.24 pushed — Subject Tracker deep control (43 achiva tools).**
 New chat: read this file first, then continue work. User speaks Hinglish; reply in Hinglish.
 
 ## User & working style
@@ -28,10 +28,16 @@ New chat: read this file first, then continue work. User speaks Hinglish; reply 
 - v1.0.19: 55MB Ubuntu bootstrap + "server did not start".
 - v1.0.20: fix `isTermuxPackage()` to recognize `com.termux.achiva` (server/auth).
 - v1.0.21/22: `LD_LIBRARY_PATH` for all termux spawns; rootfs script path/symlink rewrites.
-- v1.0.23 (CURRENT):
+- v1.0.23:
   - google_flow fix: termux-built node died (exit 13) because its compiled-in OpenSSL config path `/data/data/com.termux/...` is SELinux-blocked for `com.termux.achiva`. All node spawn paths now export `OPENSSL_CONF=<pkg>/files/usr/etc/tls/openssl.cnf` — patched in `LocalEnvironmentManager.applyTermuxRuntimeEnv`, `AgyMcpManager` (stdio MCP), `AgyPluginService`, and login/non-login wrapper script templates.
   - Achiva Agent Control: new `ACHIVA("achiva_mcp")` endpoint (path `/achiva`) with 10 tools: `achiva_get_state`, `achiva_add_task`, `achiva_toggle_task`, `achiva_add_subject`, `achiva_add_chapter`, `achiva_log_study`, `achiva_add_goal`, `achiva_add_habit`, `achiva_add_exam`, `achiva_add_thought`. Bridge: `app/src/main/assets/achiva-bridge/agent-bridge.js` -> `window.AchivaAgent` (uses Achiva's own APIs: TaskFeature/ST/GoalStore/GoodList/BadList/ThoughtStore), injected into the WebView on every `onPageFinished` via `AchivaWebBridge.kt` (15s timeout, friendly not-ready errors) — works in hosted-web mode too. "Achiva Control" quick preset added in Settings -> MCP and Claude MCP settings.
-- Known-good APK: `antiGem-termux-v1.0.23-release.apk`.
+- v1.0.24 (pushed 2026-11-03):
+  - Subject Tracker deep control: achiva_mcp 10 -> 43 tools. New ops in `agent-bridge.js` (bridge version 2): update/delete subject, update/delete chapter (priority/status/start-end dates), topic tree CRUD + per-topic notes (set_topic_notes), sources CRUD + set_source_questions (solved/doubt/doubt_solved/analysis/important; analysis Normal-only) + attempts groups (exclusive merge) + pages (union merge), chapter roadmap step CRUD (complete/mastery), GLOBAL step-template CRUD via window.SubjectSetting (add/update/delete/move, auto-sync all chapters), test book (add_test) + error book (add_mistake, upsert per testId+q, 6 MISTAKE_TYPES), revision (add/update/delete_revision_step, complete_revision rating 1-5 with GAPS {1:2,2:5,3:8,4:11,5:15}, set_revision_due capped systemDue+2, complete_question_revision via keys imp:Q/att:Q/pg:PAGE:Q), update/delete exam.
+  - ALL deletes are 2-step: without `confirm:true` they return requires_confirmation preview; tool descriptions + MCP instructions force agent to ask user in chat first.
+  - Every mutation mirrors Achiva's own file semantics (basics.js/topic.js/notes.js/sources.js/sources-detail.js/rivision.js/test.js/error.js/SubjectSetting.js/exam-widget.js) and goes through live ST.state + ST.persist() — no raw subjectTracker writes. Clamp/migration behaviour identical to app.
+  - get_state: new domains tests/errors/stepTemplates + enriched summary (chapter/topic/source/roadmap counts, subjectList).
+  - Smoke-tested: 69/69 assertions pass (scripts/bridge_smoke_test.js, mock env). Kotlin declarations cross-checked 43/43 vs JS ops.
+- Known-good APK: `antiGem-termux-v1.0.24-release.apk` (CI build pending at time of writing; v1.0.23 APK was known good).
 
 ## How to release
 1. Bump `version.json` in repo root (versionName/versionCode).

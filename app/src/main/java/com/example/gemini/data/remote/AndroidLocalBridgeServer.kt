@@ -412,7 +412,7 @@ class AndroidLocalBridgeServer private constructor() {
                 val result = JSONObject().apply {
                     put("protocolVersion", "2024-11-05")
                     if (endpoint == McpEndpoint.ANDROID) put("instructions", com.example.gemini.data.automation.AndroidAutomation.INSTRUCTIONS)
-                    if (endpoint == McpEndpoint.ACHIVA) put("instructions", "Tools to read and control the built-in Achiva productivity app (its own screen in this app). Start with achiva_get_state to see the user's tasks, subjects/chapters, goals, habits, exams, study sessions and thoughts; then use achiva_add_task / achiva_toggle_task / achiva_add_subject / achiva_add_chapter / achiva_log_study / achiva_add_goal / achiva_add_habit / achiva_add_exam / achiva_add_thought to plan and manage everything on the user's behalf. Subjects and chapters can be matched by id or by (partial) name.")
+                    if (endpoint == McpEndpoint.ACHIVA) put("instructions", "Tools to read and control the built-in Achiva productivity app (its own screen in this app). Start with achiva_get_state to see the user's tasks, subjects/chapters, goals, habits, exams, study sessions, thoughts, tests and mistakes; then use the achiva_* tools to plan and manage everything on the user's behalf. Subject tracker deep control: update subjects/chapters (priority, status, start/end dates), manage the topic tree with sub-topics, tags and per-topic notes, manage question sources (Normal/PYQ) with solved/doubt/analysis/important/attempts/pages question tracking, chapter Complete/Mastery roadmap steps, GLOBAL roadmap step templates (sync to every chapter), test book + per-question mistake log, spaced-repetition revision (complete recall with rating, adjust due date, complete question revisions). RULES: subjects/chapters/topics/sources/steps are matched by id or (partial) name. EVERY achiva_delete_* tool is two-step: the first call (without confirm) returns a preview — you MUST ask the user to confirm in chat, then call again with confirm=true to actually delete. Never delete without explicit user confirmation.")
                     if (endpoint == McpEndpoint.EXTENSION_DEVELOPER) put("instructions", "Start with webview_extension_docs. Read developer-mcp.md and the required API references, create a draft, write files, install or update, discover tools with webview_extension_test, and inspect logs to fix failures. No app source or manual ZIP handling is needed.")
                     put("capabilities", JSONObject().apply {
                         put("tools", JSONObject())
@@ -801,17 +801,17 @@ class AndroidLocalBridgeServer private constructor() {
 
             achivaTool(
                 "achiva_get_state",
-                "Read the user's Achiva productivity data. Returns a summary (today's pending tasks, active goals, upcoming exams, total study time) plus the raw domains you asked for. Call this first before toggling tasks or logging study time so you have real ids and names.",
+                "Read the user's Achiva productivity data. Returns a summary (today's pending tasks, active goals, upcoming exams, total study time, subject/chapter/topic/source counts) plus the raw domains you asked for. Call this first before any mutation so you have real ids and names. 'subjects' returns the FULL subject tracker blob (subjects -> chapters -> topics tree, sources with solved/doubt/important question lists, roadmap steps, revision history) plus tests and mistakes.",
                 JSONObject().apply {
                     put("keys", JSONObject().apply {
                         put("type", "array")
                         put("items", JSONObject().apply {
                             put("type", "string")
                             put("enum", JSONArray().apply {
-                                put("tasks"); put("subjects"); put("goals"); put("goodHabits"); put("badHabits"); put("exams"); put("studySessions"); put("thoughts")
+                                put("tasks"); put("subjects"); put("goals"); put("goodHabits"); put("badHabits"); put("exams"); put("studySessions"); put("thoughts"); put("tests"); put("errors"); put("stepTemplates")
                             })
                         })
-                        put("description", "Which domains to return (default: all). 'subjects' includes chapters; 'studySessions' are the study-time log entries.")
+                        put("description", "Which domains to return (default: all). 'subjects' includes chapters/topics/sources/revision; 'tests' are logged mock tests; 'errors' are per-question mistakes; 'stepTemplates' are the global Complete/Mastery roadmap steps.")
                     })
                 },
                 emptyArray()
@@ -931,6 +931,498 @@ class AndroidLocalBridgeServer private constructor() {
                     put("name", JSONObject().apply { put("type", "string"); put("description", "Optional short title (default: first 40 chars)") })
                 },
                 arrayOf("content")
+            )
+            /* ---------------- Subject Tracker deep control (v2) ----------------
+               Subject/chapter/topic/source matching: id ya (partial) naam.
+               DELETE tools are 2-step: pehli call (confirm ke bina) preview
+               deti hai — user se chat me confirm poochho, phir confirm=true
+               se dobara call karo. Bina confirm ke kuch delete NAHI hota. */
+            achivaTool(
+                "achiva_update_subject",
+                "Rename a subject or change its category (jee / boards / none).",
+                JSONObject().apply {
+                    put("subject", JSONObject().apply { put("type", "string"); put("description", "Subject id or (partial) name") })
+                    put("name", JSONObject().apply { put("type", "string"); put("description", "New name (optional)") })
+                    put("cat", JSONObject().apply {
+                        put("type", "string")
+                        put("enum", JSONArray().apply { put("jee"); put("boards"); put("none") })
+                        put("description", "New category, 'none' clears it (optional)")
+                    })
+                },
+                arrayOf("subject")
+            )
+            achivaTool(
+                "achiva_delete_subject",
+                "Delete a WHOLE subject with all its chapters, topics, sources, roadmaps and revision data. ALWAYS ask the user to confirm in chat first; then call again with confirm=true. First call (without confirm) only previews.",
+                JSONObject().apply {
+                    put("subject", JSONObject().apply { put("type", "string"); put("description", "Subject id or (partial) name") })
+                    put("confirm", JSONObject().apply { put("type", "boolean"); put("description", "Must be true to actually delete — only set it AFTER the user confirms in chat") })
+                },
+                arrayOf("subject")
+            )
+            achivaTool(
+                "achiva_update_chapter",
+                "Update a chapter's name, priority (Low/Medium/High), status (Not Started/In Progress/Completed), start_date or end_date (YYYY-MM-DD, or 'clear'/null to remove).",
+                JSONObject().apply {
+                    put("subject", JSONObject().apply { put("type", "string"); put("description", "Subject id or (partial) name") })
+                    put("chapter", JSONObject().apply { put("type", "string"); put("description", "Chapter id or (partial) name") })
+                    put("name", JSONObject().apply { put("type", "string") })
+                    put("priority", JSONObject().apply {
+                        put("type", "string")
+                        put("enum", JSONArray().apply { put("Low"); put("Medium"); put("High") })
+                    })
+                    put("status", JSONObject().apply {
+                        put("type", "string")
+                        put("enum", JSONArray().apply { put("Not Started"); put("In Progress"); put("Completed") })
+                    })
+                    put("start_date", JSONObject().apply { put("type", "string"); put("description", "YYYY-MM-DD or 'clear'") })
+                    put("end_date", JSONObject().apply { put("type", "string"); put("description", "YYYY-MM-DD or 'clear'") })
+                },
+                arrayOf("subject", "chapter")
+            )
+            achivaTool(
+                "achiva_delete_chapter",
+                "Delete a chapter with all its topics, sources, roadmaps and revision data. ALWAYS ask the user to confirm in chat first; then call again with confirm=true. First call (without confirm) only previews.",
+                JSONObject().apply {
+                    put("subject", JSONObject().apply { put("type", "string"); put("description", "Subject id or (partial) name") })
+                    put("chapter", JSONObject().apply { put("type", "string"); put("description", "Chapter id or (partial) name") })
+                    put("confirm", JSONObject().apply { put("type", "boolean"); put("description", "Must be true to actually delete — only AFTER user confirms in chat") })
+                },
+                arrayOf("subject", "chapter")
+            )
+            achivaTool(
+                "achiva_add_step",
+                "Add a step to a chapter's Complete Roadmap (list='complete') or Mastery Roadmap (list='mastery'). Optional index to insert at a position.",
+                JSONObject().apply {
+                    put("subject", JSONObject().apply { put("type", "string") })
+                    put("chapter", JSONObject().apply { put("type", "string") })
+                    put("list", JSONObject().apply {
+                        put("type", "string")
+                        put("enum", JSONArray().apply { put("complete"); put("mastery") })
+                    })
+                    put("text", JSONObject().apply { put("type", "string"); put("description", "e.g. 'Read NCERT theory'") })
+                    put("index", JSONObject().apply { put("type", "integer"); put("description", "Optional 0-based position (default: append at end)") })
+                },
+                arrayOf("subject", "chapter", "list", "text")
+            )
+            achivaTool(
+                "achiva_update_step",
+                "Edit a roadmap step's text or tick/untick it (done). Step matched by id or (partial) text.",
+                JSONObject().apply {
+                    put("subject", JSONObject().apply { put("type", "string") })
+                    put("chapter", JSONObject().apply { put("type", "string") })
+                    put("list", JSONObject().apply {
+                        put("type", "string")
+                        put("enum", JSONArray().apply { put("complete"); put("mastery") })
+                    })
+                    put("step", JSONObject().apply { put("type", "string"); put("description", "Step id or (partial) text") })
+                    put("text", JSONObject().apply { put("type", "string") })
+                    put("done", JSONObject().apply { put("type", "boolean") })
+                },
+                arrayOf("subject", "chapter", "list", "step")
+            )
+            achivaTool(
+                "achiva_delete_step",
+                "Delete a roadmap step. ALWAYS ask the user to confirm in chat first; then call again with confirm=true. First call only previews.",
+                JSONObject().apply {
+                    put("subject", JSONObject().apply { put("type", "string") })
+                    put("chapter", JSONObject().apply { put("type", "string") })
+                    put("list", JSONObject().apply {
+                        put("type", "string")
+                        put("enum", JSONArray().apply { put("complete"); put("mastery") })
+                    })
+                    put("step", JSONObject().apply { put("type", "string"); put("description", "Step id or (partial) text") })
+                    put("confirm", JSONObject().apply { put("type", "boolean") })
+                },
+                arrayOf("subject", "chapter", "list", "step")
+            )
+            achivaTool(
+                "achiva_add_step_template",
+                "Add a step to the GLOBAL Complete/Mastery roadmap templates (the triangle icon on the subject tracker screen). The step automatically appears in EVERY chapter's roadmap.",
+                JSONObject().apply {
+                    put("key", JSONObject().apply {
+                        put("type", "string")
+                        put("enum", JSONArray().apply { put("complete"); put("mastery") })
+                    })
+                    put("text", JSONObject().apply { put("type", "string") })
+                },
+                arrayOf("key", "text")
+            )
+            achivaTool(
+                "achiva_update_step_template",
+                "Rename a global roadmap template step (syncs to all chapters that haven't locally edited it). Get template ids via achiva_get_state keys=['stepTemplates'].",
+                JSONObject().apply {
+                    put("key", JSONObject().apply {
+                        put("type", "string")
+                        put("enum", JSONArray().apply { put("complete"); put("mastery") })
+                    })
+                    put("id", JSONObject().apply { put("type", "string") })
+                    put("text", JSONObject().apply { put("type", "string") })
+                },
+                arrayOf("key", "id", "text")
+            )
+            achivaTool(
+                "achiva_delete_step_template",
+                "Delete a global roadmap template step (it disappears from ALL chapters). ALWAYS ask the user to confirm in chat first; then call again with confirm=true.",
+                JSONObject().apply {
+                    put("key", JSONObject().apply {
+                        put("type", "string")
+                        put("enum", JSONArray().apply { put("complete"); put("mastery") })
+                    })
+                    put("id", JSONObject().apply { put("type", "string") })
+                    put("confirm", JSONObject().apply { put("type", "boolean") })
+                },
+                arrayOf("key", "id")
+            )
+            achivaTool(
+                "achiva_move_step_template",
+                "Reorder a global roadmap template step: dir=-1 moves it up, dir=1 moves it down (syncs to all chapters).",
+                JSONObject().apply {
+                    put("key", JSONObject().apply {
+                        put("type", "string")
+                        put("enum", JSONArray().apply { put("complete"); put("mastery") })
+                    })
+                    put("id", JSONObject().apply { put("type", "string") })
+                    put("dir", JSONObject().apply { put("type", "integer"); put("description", "-1 = up, 1 = down") })
+                },
+                arrayOf("key", "id", "dir")
+            )
+            achivaTool(
+                "achiva_add_topic",
+                "Add one or more topics (or sub-topics) to a chapter's topic tree. Use parent_topic to nest under an existing topic; optional tag 'imp' or 'vvi'.",
+                JSONObject().apply {
+                    put("subject", JSONObject().apply { put("type", "string") })
+                    put("chapter", JSONObject().apply { put("type", "string") })
+                    put("name", JSONObject().apply { put("type", "string"); put("description", "Single topic name (or use names array)") })
+                    put("names", JSONObject().apply {
+                        put("type", "array")
+                        put("items", JSONObject().apply { put("type", "string") })
+                        put("description", "Multiple topic names in one call")
+                    })
+                    put("parent_topic", JSONObject().apply { put("type", "string"); put("description", "Optional parent topic (id or partial name) to create a sub-topic") })
+                    put("tag", JSONObject().apply {
+                        put("type", "string")
+                        put("enum", JSONArray().apply { put("imp"); put("vvi") })
+                    })
+                },
+                arrayOf("subject", "chapter")
+            )
+            achivaTool(
+                "achiva_update_topic",
+                "Rename a topic, set its tag ('' none / imp / vvi), or tick/untick it — done applies to the whole subtree (same as the app).",
+                JSONObject().apply {
+                    put("subject", JSONObject().apply { put("type", "string") })
+                    put("chapter", JSONObject().apply { put("type", "string") })
+                    put("topic", JSONObject().apply { put("type", "string"); put("description", "Topic id or (partial) name — searched the whole tree") })
+                    put("name", JSONObject().apply { put("type", "string") })
+                    put("tag", JSONObject().apply {
+                        put("type", "string")
+                        put("enum", JSONArray().apply { put(""); put("imp"); put("vvi") })
+                        put("description", "'' clears the tag")
+                    })
+                    put("done", JSONObject().apply { put("type", "boolean"); put("description", "true ticks topic + all sub-topics") })
+                },
+                arrayOf("subject", "chapter", "topic")
+            )
+            achivaTool(
+                "achiva_set_topic_notes",
+                "Write the detail/explanation of a topic (its notes page — title + rich text). This is the topic's 'detail me explain karo' content.",
+                JSONObject().apply {
+                    put("subject", JSONObject().apply { put("type", "string") })
+                    put("chapter", JSONObject().apply { put("type", "string") })
+                    put("topic", JSONObject().apply { put("type", "string") })
+                    put("title", JSONObject().apply { put("type", "string"); put("description", "Optional notes title") })
+                    put("notes", JSONObject().apply { put("type", "string"); put("description", "The explanation text (plain text, newlines allowed)") })
+                },
+                arrayOf("subject", "chapter", "topic")
+            )
+            achivaTool(
+                "achiva_delete_topic",
+                "Delete a topic and its whole subtree (sub-topics + their notes). ALWAYS ask the user to confirm in chat first; then call again with confirm=true.",
+                JSONObject().apply {
+                    put("subject", JSONObject().apply { put("type", "string") })
+                    put("chapter", JSONObject().apply { put("type", "string") })
+                    put("topic", JSONObject().apply { put("type", "string") })
+                    put("confirm", JSONObject().apply { put("type", "boolean") })
+                },
+                arrayOf("subject", "chapter", "topic")
+            )
+            achivaTool(
+                "achiva_add_source",
+                "Add a question source to a chapter (e.g. 'DC Pandey Rotational'). category 'Normal' ya 'PYQ'. total = number of questions in the source.",
+                JSONObject().apply {
+                    put("subject", JSONObject().apply { put("type", "string") })
+                    put("chapter", JSONObject().apply { put("type", "string") })
+                    put("name", JSONObject().apply { put("type", "string") })
+                    put("total", JSONObject().apply { put("type", "integer"); put("description", "Total questions (default 0)") })
+                    put("category", JSONObject().apply {
+                        put("type", "string")
+                        put("enum", JSONArray().apply { put("Normal"); put("PYQ") })
+                    })
+                },
+                arrayOf("subject", "chapter", "name")
+            )
+            achivaTool(
+                "achiva_update_source",
+                "Edit a source's name, total questions or category. If total decreases, question numbers beyond the new total are removed everywhere (same as the app).",
+                JSONObject().apply {
+                    put("subject", JSONObject().apply { put("type", "string") })
+                    put("chapter", JSONObject().apply { put("type", "string") })
+                    put("source", JSONObject().apply { put("type", "string"); put("description", "Source id or (partial) name") })
+                    put("name", JSONObject().apply { put("type", "string") })
+                    put("total", JSONObject().apply { put("type", "integer") })
+                    put("category", JSONObject().apply {
+                        put("type", "string")
+                        put("enum", JSONArray().apply { put("Normal"); put("PYQ") })
+                    })
+                },
+                arrayOf("subject", "chapter", "source")
+            )
+            achivaTool(
+                "achiva_delete_source",
+                "Delete a source with all its question tracking. ALWAYS ask the user to confirm in chat first; then call again with confirm=true.",
+                JSONObject().apply {
+                    put("subject", JSONObject().apply { put("type", "string") })
+                    put("chapter", JSONObject().apply { put("type", "string") })
+                    put("source", JSONObject().apply { put("type", "string") })
+                    put("confirm", JSONObject().apply { put("type", "boolean") })
+                },
+                arrayOf("subject", "chapter", "source")
+            )
+            achivaTool(
+                "achiva_set_source_questions",
+                "Mark question numbers on a source's lists: 'solved', 'doubt' (doubtful questions), 'doubt_solved' (doubt resolved), 'analysis' (Normal sources only), 'important' (starred). mode: 'set' replaces the list, 'add' merges, 'remove' unmarks.",
+                JSONObject().apply {
+                    put("subject", JSONObject().apply { put("type", "string") })
+                    put("chapter", JSONObject().apply { put("type", "string") })
+                    put("source", JSONObject().apply { put("type", "string") })
+                    put("list", JSONObject().apply {
+                        put("type", "string")
+                        put("enum", JSONArray().apply { put("solved"); put("doubt"); put("doubt_solved"); put("analysis"); put("important") })
+                    })
+                    put("mode", JSONObject().apply {
+                        put("type", "string")
+                        put("enum", JSONArray().apply { put("set"); put("add"); put("remove") })
+                        put("description", "Default: add")
+                    })
+                    put("questions", JSONObject().apply {
+                        put("type", "array")
+                        put("items", JSONObject().apply { put("type", "integer") })
+                        put("description", "Question numbers, e.g. [3, 7, 12]")
+                    })
+                },
+                arrayOf("subject", "chapter", "source", "list", "questions")
+            )
+            achivaTool(
+                "achiva_add_source_attempts",
+                "Tag questions as solved in 2/3/4+ attempts on a source. Groups are exclusive: questions moved here are removed from other attempt groups (same as the app).",
+                JSONObject().apply {
+                    put("subject", JSONObject().apply { put("type", "string") })
+                    put("chapter", JSONObject().apply { put("type", "string") })
+                    put("source", JSONObject().apply { put("type", "string") })
+                    put("attempts", JSONObject().apply {
+                        put("type", "string")
+                        put("enum", JSONArray().apply { put("2"); put("3"); put("4+") })
+                    })
+                    put("questions", JSONObject().apply {
+                        put("type", "array")
+                        put("items", JSONObject().apply { put("type", "integer") })
+                    })
+                },
+                arrayOf("subject", "chapter", "source", "attempts", "questions")
+            )
+            achivaTool(
+                "achiva_delete_source_attempts",
+                "Delete an attempts group ('2'/'3'/'4+') from a source. ALWAYS ask the user to confirm in chat first; then call again with confirm=true.",
+                JSONObject().apply {
+                    put("subject", JSONObject().apply { put("type", "string") })
+                    put("chapter", JSONObject().apply { put("type", "string") })
+                    put("source", JSONObject().apply { put("type", "string") })
+                    put("attempts", JSONObject().apply { put("type", "string"); put("description", "'2', '3', '4+' or group id") })
+                    put("confirm", JSONObject().apply { put("type", "boolean") })
+                },
+                arrayOf("subject", "chapter", "source", "attempts")
+            )
+            achivaTool(
+                "achiva_add_source_page",
+                "Mark an important page of a source with its important topics and question numbers. Adding to the same page again merges (union).",
+                JSONObject().apply {
+                    put("subject", JSONObject().apply { put("type", "string") })
+                    put("chapter", JSONObject().apply { put("type", "string") })
+                    put("source", JSONObject().apply { put("type", "string") })
+                    put("page", JSONObject().apply { put("type", "integer") })
+                    put("topics", JSONObject().apply {
+                        put("type", "array")
+                        put("items", JSONObject().apply { put("type", "string") })
+                        put("description", "Important topic names on this page")
+                    })
+                    put("questions", JSONObject().apply {
+                        put("type", "array")
+                        put("items", JSONObject().apply { put("type", "integer") })
+                    })
+                },
+                arrayOf("subject", "chapter", "source", "page")
+            )
+            achivaTool(
+                "achiva_delete_source_page",
+                "Delete an important-page entry from a source. ALWAYS ask the user to confirm in chat first; then call again with confirm=true.",
+                JSONObject().apply {
+                    put("subject", JSONObject().apply { put("type", "string") })
+                    put("chapter", JSONObject().apply { put("type", "string") })
+                    put("source", JSONObject().apply { put("type", "string") })
+                    put("page", JSONObject().apply { put("type", "integer"); put("description", "Page number (or entry id)") })
+                    put("confirm", JSONObject().apply { put("type", "boolean") })
+                },
+                arrayOf("subject", "chapter", "source", "page")
+            )
+            achivaTool(
+                "achiva_add_test",
+                "Log a mock/previous test in the Test Book (subject tracker). Records type, subjects/chapters covered, questions, marks and optional rank.",
+                JSONObject().apply {
+                    put("name", JSONObject().apply { put("type", "string"); put("description", "Default 'Test N'") })
+                    put("date", JSONObject().apply { put("type", "string"); put("description", "YYYY-MM-DD") })
+                    put("type", JSONObject().apply {
+                        put("type", "string")
+                        put("enum", JSONArray().apply { put("JEE Mains"); put("JEE Advanced"); put("Mock Test") })
+                    })
+                    put("subjects", JSONObject().apply {
+                        put("type", "array")
+                        put("items", JSONObject().apply { put("type", "string") })
+                        put("description", "Subject ids or names covered")
+                    })
+                    put("chapters", JSONObject().apply {
+                        put("type", "array")
+                        put("items", JSONObject().apply {
+                            put("type", "object")
+                            put("properties", JSONObject().apply {
+                                put("subject", JSONObject().apply { put("type", "string") })
+                                put("chapter", JSONObject().apply { put("type", "string") })
+                            })
+                        })
+                        put("description", "Chapters covered, e.g. [{\"subject\":\"Physics\",\"chapter\":\"Rotation\"}]")
+                    })
+                    put("total_q", JSONObject().apply { put("type", "integer") })
+                    put("attempted", JSONObject().apply { put("type", "integer") })
+                    put("marks_got", JSONObject().apply { put("type", "integer") })
+                    put("marks_total", JSONObject().apply { put("type", "integer") })
+                    put("rank", JSONObject().apply { put("type", "integer") })
+                    put("rank_total", JSONObject().apply { put("type", "integer") })
+                },
+                arrayOf("date", "type")
+            )
+            achivaTool(
+                "achiva_add_mistake",
+                "Record a question mistake in the Error Book for a test. Same test+question again = update. types: Conceptual Mistake, Calculation Mistake, Reading Mistake, Memory Mistake, Careless / Silly Mistake, Time Pressure Mistake.",
+                JSONObject().apply {
+                    put("test", JSONObject().apply { put("type", "string"); put("description", "Test id or (partial) name") })
+                    put("q", JSONObject().apply { put("type", "integer"); put("description", "Question number") })
+                    put("types", JSONObject().apply {
+                        put("type", "array")
+                        put("items", JSONObject().apply { put("type", "string") })
+                        put("description", "1-6 mistake types from the allowed list")
+                    })
+                    put("desc", JSONObject().apply { put("type", "string"); put("description", "What went wrong") })
+                },
+                arrayOf("test", "q", "types")
+            )
+            achivaTool(
+                "achiva_add_revision_step",
+                "Add a step to a chapter's revision checklist: list='chapter' (chapter recall steps) ya 'question' (question revision steps).",
+                JSONObject().apply {
+                    put("subject", JSONObject().apply { put("type", "string") })
+                    put("chapter", JSONObject().apply { put("type", "string") })
+                    put("list", JSONObject().apply {
+                        put("type", "string")
+                        put("enum", JSONArray().apply { put("chapter"); put("question") })
+                    })
+                    put("text", JSONObject().apply { put("type", "string") })
+                },
+                arrayOf("subject", "chapter", "list", "text")
+            )
+            achivaTool(
+                "achiva_update_revision_step",
+                "Rename a revision checklist step.",
+                JSONObject().apply {
+                    put("subject", JSONObject().apply { put("type", "string") })
+                    put("chapter", JSONObject().apply { put("type", "string") })
+                    put("list", JSONObject().apply {
+                        put("type", "string")
+                        put("enum", JSONArray().apply { put("chapter"); put("question") })
+                    })
+                    put("step", JSONObject().apply { put("type", "string"); put("description", "Step id or (partial) text") })
+                    put("text", JSONObject().apply { put("type", "string") })
+                },
+                arrayOf("subject", "chapter", "list", "step", "text")
+            )
+            achivaTool(
+                "achiva_delete_revision_step",
+                "Delete a revision checklist step. ALWAYS ask the user to confirm in chat first; then call again with confirm=true.",
+                JSONObject().apply {
+                    put("subject", JSONObject().apply { put("type", "string") })
+                    put("chapter", JSONObject().apply { put("type", "string") })
+                    put("list", JSONObject().apply {
+                        put("type", "string")
+                        put("enum", JSONArray().apply { put("chapter"); put("question") })
+                    })
+                    put("step", JSONObject().apply { put("type", "string") })
+                    put("confirm", JSONObject().apply { put("type", "boolean") })
+                },
+                arrayOf("subject", "chapter", "list", "step")
+            )
+            achivaTool(
+                "achiva_complete_revision",
+                "Complete a chapter recall session with a self-rating 1-5 (1 Worst, 2 Weak, 3 Average, 4 Good, 5 Perfect). Schedules the next revision automatically (2/5/8/11/15 days).",
+                JSONObject().apply {
+                    put("subject", JSONObject().apply { put("type", "string") })
+                    put("chapter", JSONObject().apply { put("type", "string") })
+                    put("rating", JSONObject().apply { put("type", "integer"); put("description", "1-5") })
+                },
+                arrayOf("subject", "chapter", "rating")
+            )
+            achivaTool(
+                "achiva_set_revision_due",
+                "Move the next revision's due date. The app caps it at 2 days beyond the system-due date; backward is always allowed.",
+                JSONObject().apply {
+                    put("subject", JSONObject().apply { put("type", "string") })
+                    put("chapter", JSONObject().apply { put("type", "string") })
+                    put("date", JSONObject().apply { put("type", "string"); put("description", "YYYY-MM-DD") })
+                },
+                arrayOf("subject", "chapter", "date")
+            )
+            achivaTool(
+                "achiva_complete_question_revision",
+                "Complete a question-revision session: pass the revised question keys — 'imp:Q' (important), 'att:Q' (attempts group), 'pg:PAGE:Q' (important page). Counts increment per question (Q-REV progress needs 3).",
+                JSONObject().apply {
+                    put("subject", JSONObject().apply { put("type", "string") })
+                    put("chapter", JSONObject().apply { put("type", "string") })
+                    put("source", JSONObject().apply { put("type", "string"); put("description", "Optional: limit to one source") })
+                    put("keys", JSONObject().apply {
+                        put("type", "array")
+                        put("items", JSONObject().apply { put("type", "string") })
+                        put("description", "e.g. [\"imp:5\",\"att:12\",\"pg:23:4\"] — build these from the source's important/attempts/pages in achiva_get_state")
+                    })
+                },
+                arrayOf("subject", "chapter", "keys")
+            )
+            achivaTool(
+                "achiva_update_exam",
+                "Rename an exam or change its date/time (the countdown widget on subject screens updates).",
+                JSONObject().apply {
+                    put("exam", JSONObject().apply { put("type", "string"); put("description", "Exam id or (partial) name") })
+                    put("name", JSONObject().apply { put("type", "string") })
+                    put("date", JSONObject().apply { put("type", "string"); put("description", "YYYY-MM-DD") })
+                    put("time", JSONObject().apply { put("type", "string"); put("description", "HH:MM (default 09:00 when date changes)") })
+                },
+                arrayOf("exam")
+            )
+            achivaTool(
+                "achiva_delete_exam",
+                "Delete an exam from the tracker. ALWAYS ask the user to confirm in chat first; then call again with confirm=true.",
+                JSONObject().apply {
+                    put("exam", JSONObject().apply { put("type", "string"); put("description", "Exam id or (partial) name") })
+                    put("confirm", JSONObject().apply { put("type", "boolean") })
+                },
+                arrayOf("exam")
             )
         }
 

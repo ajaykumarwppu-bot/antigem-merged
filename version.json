@@ -1,15 +1,19 @@
 {
-  "version_code": 123,
-  "version_name": "1.0.23",
+  "version_code": 124,
+  "version_name": "1.0.24",
   "min_supported_version_code": 1,
   "changelog": [
-    "FIXED google_flow MCP: node extension host died with exit 13 the moment it touched crypto — termux-built node ships OpenSSL with the compiled-in /data/data/com.termux config path which is SELinux-blocked for this package. All node spawns (extension host, stdio MCP servers, plugin MCP servers, terminal login shells) now get OPENSSL_CONF pointed at this package's own usr/etc/tls/openssl.cnf",
-    "NEW Achiva Agent Control: the AI agent can now read and manage Achiva — new achiva_mcp MCP server (add via Settings → MCP → Quick Presets → 'Achiva Control') with 10 tools",
-    "achiva_get_state: see tasks, subjects/chapters, goals, good/bad habits, exams, study sessions and thoughts with a quick summary",
-    "achiva_add_task / achiva_toggle_task: plan tasks (one-time, daily/weekly/monthly/every-N-days, priority) and mark them done",
-    "achiva_add_subject / achiva_add_chapter / achiva_log_study: manage the subject tracker and log study sessions (backdated supported)",
-    "achiva_add_goal / achiva_add_habit / achiva_add_exam / achiva_add_thought: goals, habits, exam countdowns and text thoughts",
-    "Achiva bridge works in hosted-web mode too: the bridge script is injected into the Achiva page on every load"
+    "NEW Subject Tracker deep control for the AI agent: the achiva_mcp MCP server grew from 10 to 43 tools — the agent can now do everything in the subject tracker that you can do by hand",
+    "Chapters: update priority (Low/Medium/High), status (Not Started/In Progress/Completed), start/end dates, rename, delete",
+    "Topics: add topics and nested sub-topics, rename, imp/vvi tags, tick/untick with subtree, write per-topic detailed notes, delete",
+    "Sources: add/edit/delete Normal/PYQ question sources, mark solved/doubt/doubt-solved/analysis/important question numbers, 2/3/4+ attempt groups, important pages with topics",
+    "Roadmaps: add/edit/tick/delete chapter Complete & Mastery roadmap steps, plus the GLOBAL step templates (triangle icon) — add/rename/reorder/delete with auto-sync to every chapter",
+    "Revision system: chapter recall completion with 1-5 rating and automatic next-due scheduling, due-date adjust (app caps respected), question-revision completion via imp/att/pg keys, revision checklist step CRUD",
+    "Test Book + Error Book: log mock tests (type, subjects, chapters, marks, rank) and per-question mistakes with all 6 mistake types",
+    "Exams: update and delete (add already existed)",
+    "Deletes are SAFE by design: every achiva_delete_* tool is two-step — first call previews, the agent must ask you in chat, and only then can it delete with confirm=true",
+    "achiva_get_state now also returns tests, mistakes and global step templates, plus an enriched summary (chapter/topic/source counts, per-subject overview)",
+    "Bridge data safety: every mutation goes through Achiva's own live stores (ST.state + persist), mirroring the app's exact clamp/merge/migration behaviour — no raw storage writes"
   ],
   "is_critical": false
 }
