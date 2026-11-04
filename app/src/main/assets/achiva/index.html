@@ -153,6 +153,46 @@
   <script>
     (function () {
       'use strict';
+      /* ========================================================
+         RENDER LAYER — PARALLEL PRELOAD (v4 speed fix)
+         --------------------------------------------------------
+         KaTeX + mhchem + markdown-it + DOMPurify + math-render.js
+         pehle is chain ke SABSE AAKHIR mein the (aur poora chain
+         ek-ek karke 'load' ke BAAD chalta tha) — mobile network par
+         notes ka Read view kaafi der tak RAW $..$ dikhata tha.
+         Ab ye 5 scripts app ke baaki scripts ke SAATH-SAATH parallel
+         load hote hain. Sab render-time-guarded hain
+         (MathRender.available() / richReady()), isliye app boot par
+         koi asar nahi. mhchem window.katex maangta hai — use katex
+         ke BAAD chain karte hain (race se bachne ke liye).
+         ======================================================== */
+      window.__achivaLibs = { katex: false, mhchem: false, 'markdown-it': false, purify: false, mathrender: false };
+      function __achivaLibReady(name, ok) {
+        window.__achivaLibs[name] = ok;
+        try {
+          if (window.MathRender && typeof window.MathRender.__libNotify === 'function') {
+            window.MathRender.__libNotify(name, ok);
+          }
+        } catch (e) { }
+      }
+      function __addScript(src, onload) {
+        var s = document.createElement('script');
+        s.src = src;
+        s.onload = function () { if (onload) onload(); };
+        s.onerror = function () {
+          (window.__ACHIVA_LOAD_ERRORS = window.__ACHIVA_LOAD_ERRORS || []).push(src);
+          if (onload) onload(); /* chain aage badhe (mhchem ko katex ka wait nahi karna) */
+        };
+        document.head.appendChild(s);
+      }
+      __addScript('vendor/markdown-it/markdown-it.min.js', function () { __achivaLibReady('markdown-it', !!window.markdownit); });
+      __addScript('vendor/purify/purify.min.js', function () { __achivaLibReady('purify', !!(window.DOMPurify && window.DOMPurify.sanitize)); });
+      __addScript('ai/math-render.js', function () { __achivaLibReady('mathrender', true); });
+      __addScript('vendor/katex/katex.min.js', function () {
+        __achivaLibReady('katex', !!window.katex);
+        __addScript('vendor/katex/contrib/mhchem.min.js', function () { __achivaLibReady('mhchem', !!window.katex); });
+      });
+
       /* ORIGINAL load order — wahi jo pehle static tags tha */
       var SRC = [
         /* DAY-CLOCK: "mera din kab shuru hota hai" — sabse pehle, kyunki
@@ -242,23 +282,12 @@
         'backend/settings.js',
         'core/app-shell.js',
         'core/boot.js',
-        /* KATEX (math rendering — notes.js Read view). Sabse AAKHIR mein:
-           ~300KB parse se app boot delay na ho. Fail-safe: load na ho
-           to MathRender.available() false → notes Read view formulas
-           raw $..$ text dikhata hai + hint, app kabhi rukti nahi.
-           math-render.js inke BAAD (window.katex use karta hai). */
-        'vendor/katex/katex.min.js',
-        'vendor/katex/contrib/mhchem.min.js',   /* \ce{...} chemistry eqs */
-        /* MARKDOWN LAYER (notes Read view): markdown-it parser + DOMPurify
-           sanitizer. math-render.js ka RICH path in dono par chalta hai;
-           koi ek bhi load na ho to purana PLAIN renderer fallback hai
-           (content kabhi lost nahi). */
-        'vendor/markdown-it/markdown-it.min.js',
-        'vendor/purify/purify.min.js',
-        'ai/math-render.js',
         /* NOTES-AI (Phase 2): Notes screen ke ✨ AI button ka popup —
            Copy Prompt (external AI ke liye) + paste + Preview + Save.
-           math-render ke BAAD (Preview isi se render hota hai). */
+           KaTeX/markdown-it/purify/math-render AB UPAR parallel preload
+           hote hain (v4) — chain ke end se hataye gaye, taaki Read view
+           turant rendered mile. notes-ai ka Preview MathRender ko
+           open-time par use karta hai, isliye ye yahan theek hai. */
         'ai/notes-ai.js'
       ];
       var storageReady = false, docReady = false, started = false;

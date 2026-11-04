@@ -1,19 +1,12 @@
 {
-  "version_code": 124,
-  "version_name": "1.0.24",
+  "version_code": 125,
+  "version_name": "1.0.25",
   "min_supported_version_code": 1,
   "changelog": [
-    "NEW Subject Tracker deep control for the AI agent: the achiva_mcp MCP server grew from 10 to 43 tools — the agent can now do everything in the subject tracker that you can do by hand",
-    "Chapters: update priority (Low/Medium/High), status (Not Started/In Progress/Completed), start/end dates, rename, delete",
-    "Topics: add topics and nested sub-topics, rename, imp/vvi tags, tick/untick with subtree, write per-topic detailed notes, delete",
-    "Sources: add/edit/delete Normal/PYQ question sources, mark solved/doubt/doubt-solved/analysis/important question numbers, 2/3/4+ attempt groups, important pages with topics",
-    "Roadmaps: add/edit/tick/delete chapter Complete & Mastery roadmap steps, plus the GLOBAL step templates (triangle icon) — add/rename/reorder/delete with auto-sync to every chapter",
-    "Revision system: chapter recall completion with 1-5 rating and automatic next-due scheduling, due-date adjust (app caps respected), question-revision completion via imp/att/pg keys, revision checklist step CRUD",
-    "Test Book + Error Book: log mock tests (type, subjects, chapters, marks, rank) and per-question mistakes with all 6 mistake types",
-    "Exams: update and delete (add already existed)",
-    "Deletes are SAFE by design: every achiva_delete_* tool is two-step — first call previews, the agent must ask you in chat, and only then can it delete with confirm=true",
-    "achiva_get_state now also returns tests, mistakes and global step templates, plus an enriched summary (chapter/topic/source counts, per-subject overview)",
-    "Bridge data safety: every mutation goes through Achiva's own live stores (ST.state + persist), mirroring the app's exact clamp/merge/migration behaviour — no raw storage writes"
+    "The AI agent now controls EVERY Achiva feature, not just the subject tracker: Tasks (bulk add, bulk tick by name, edit, delete), Goals (create with date windows, progress tasks, session logging), Habits (good/bad with one-click / time-slot / timer types, one-call daily logging, defend & slip tracking), Thoughts (knowledge-graph categories + links), Focus Shield (blocking rules, strict levels, service start/stop) and Draw boards (canvases + cards)",
+    "SPEED: the agent's toolset was consolidated to 40 leaner tools — bulk operations finish in ONE call (a whole day's tasks, a full syllabus, all daily habits), one generic update/delete covers everything, and get_state has a compact light mode — every action now needs fewer round trips and far fewer tokens",
+    "Deletes stay SAFE by design: every delete is two-step — first call only previews, the agent must ask you in chat, and only then can it delete with confirm=true",
+    "KaTeX fix: formulas in topic notes now render even when the math libraries load late (slow network) — the open Read view re-renders automatically the moment rendering is ready, and the libraries now load in parallel with the app instead of at the end of the boot chain"
   ],
   "is_critical": false
 }

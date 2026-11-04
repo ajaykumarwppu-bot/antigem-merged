@@ -239,7 +239,24 @@
     if (readBtn) readBtn.classList.toggle('sel', !writing);
     if (body) body.style.display = writing ? 'flex' : 'none';
     if (readWrap) readWrap.style.display = writing ? 'none' : 'block';
-    if (!writing) renderRead();
+    if (!writing) { renderRead(); hookLibReady(); }
+  }
+
+  /* KaTeX/markdown libs LATE-load par Read view AUTO re-render —
+     pehle agar libs load na hui thin to raw $..$ atak jata tha jab tak
+     screen dobara na khulti. Ab jis hi waqt render layer ready hoti hai,
+     khula Read view khud render ho jata hai. */
+  var reRenderHooked = false;
+  function hookLibReady() {
+    if (reRenderHooked) return;
+    reRenderHooked = true;
+    try {
+      if (window.MathRender && typeof window.MathRender.onReady === 'function') {
+        window.MathRender.onReady(function () {
+          if (screen && screen.classList.contains('active') && viewMode === 'read') renderRead();
+        });
+      }
+    } catch (e) { }
   }
 
   function renderRead() {
@@ -491,6 +508,7 @@
     ta.value = node.notes || '';
     ta.scrollTop = 0;
     setView('write');                /* har open Write tab se shuru */
+    hookLibReady();                  /* libs ready hone par Read re-render */
     paintNavState();                 /* Prev/Next : nav mila? single node? */
 
     /* jahan se khola, wahi yaad rakho — back par wahi wapas */

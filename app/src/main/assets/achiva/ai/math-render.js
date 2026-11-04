@@ -61,6 +61,40 @@
 
   function katexReady() { return !!window.katex; }
 
+  /* ================================================================
+     READY / RE-RENDER SUPPORT (v4)
+     ----------------------------------------------------------------
+     Render libs (katex/markdown-it/purify) ab index.html se app ke
+     baaki scripts ke SAATH PARALLEL preload hote hain. Agar notes ka
+     Read view pehle khul gaya (libs abhi nahi aayi → raw $..$), to
+     libs ready hote hi notes.js re-render kar sakta hai — MathRender
+     .onReady(cb) se. __libNotify index.html ke loader se call hota hai.
+     ================================================================ */
+  var __readyCbs = [];
+  function __readyNow() {
+    var cbs = __readyCbs; __readyCbs = [];
+    cbs.forEach(function (cb) { try { cb(); } catch (e) { } });
+  }
+  function __libNotify(name, ok) {
+    if (!ok) return;
+    if (name === 'katex' || name === 'markdown-it' || name === 'purify') {
+      if (katexReady() && richReady()) window.setTimeout(__readyNow, 0);
+    }
+  }
+  function onReady(cb) {
+    if (typeof cb !== 'function') return;
+    if (katexReady() && richReady()) { try { cb(); } catch (e) { } return; }
+    __readyCbs.push(cb);
+  }
+  /* agar libs MathRender ke load hone se pehle hi ready ho gayi thin
+     (parallel race) — ek tick baad listeners ko bata do */
+  try {
+    if (katexReady() && typeof window.markdownit === 'function' &&
+        window.DOMPurify && window.DOMPurify.sanitize) {
+      window.setTimeout(__readyNow, 0);
+    }
+  } catch (e) { }
+
   /* ---------- single formula → safe HTML ---------- */
   function renderMathHtml(latex, display) {
     if (!katexReady()) {
@@ -279,6 +313,8 @@
   window.MathRender = {
     available: katexReady,
     richReady: richReady,          /* markdown+purify ready? (tests/debug) */
+    onReady: onReady,              /* libs late-load par re-render ke liye */
+    __libNotify: __libNotify,      /* index.html parallel loader hook */
     tokenize: tokenize,
     renderText: renderText,
     renderMathHtml: renderMathHtml,
